@@ -334,28 +334,28 @@ static char powercycle(struct rtimer *t, void *ptr) {
 
     packet_seen = 0;
 
-    // for (count = 0; count < CCA_COUNT_MAX; ++count) {
-    //   if (we_are_sending == 0 && we_are_receiving_burst == 0) {
-    //     powercycle_turn_radio_on();
-    //     /* Check if a packet is seen in the air. If so, we keep the
-    //          radio on for a while (LISTEN_TIME_AFTER_PACKET_DETECTED) to
-    //          be able to receive the packet. We also continuously check
-    //          the radio medium to make sure that we wasn't woken up by a
-    //          false positive: a spurious radio interference that was not
-    //          caused by an incoming packet. */
-    //     if (NETSTACK_RADIO.channel_clear() == 0) {
-    //       printf("packet seen\n");
-    //       packet_seen = 1;
-    //       break;
-    //     }
-    //     powercycle_turn_radio_off();
-    //   }
-    //   schedule_powercycle_fixed(t, RTIMER_NOW() + CCA_SLEEP_TIME);
-    //   PT_YIELD(&pt);
-    // }
-    // powercycle_turn_radio_off();
-    powercycle_turn_radio_on();
-    if (NETSTACK_RADIO.pending_packet() || NETSTACK_RADIO.receiving_packet()) {
+    for (count = 0; count < CCA_COUNT_MAX; ++count) {
+      if (we_are_sending == 0 && we_are_receiving_burst == 0) {
+        powercycle_turn_radio_on();
+        /* Check if a packet is seen in the air. If so, we keep the
+             radio on for a while (LISTEN_TIME_AFTER_PACKET_DETECTED) to
+             be able to receive the packet. We also continuously check
+             the radio medium to make sure that we wasn't woken up by a
+             false positive: a spurious radio interference that was not
+             caused by an incoming packet. */
+        if (NETSTACK_RADIO.channel_clear() == 0) {
+          printf("packet seen\n");
+          packet_seen = 1;
+          break;
+        }
+        powercycle_turn_radio_off();
+      }
+      schedule_powercycle_fixed(t, RTIMER_NOW() + CCA_SLEEP_TIME);
+      PT_YIELD(&pt);
+    }
+    powercycle_turn_radio_off();
+
+    if (packet_seen) {
       // printf("packet seen\n");
 
       static rtimer_clock_t start;
@@ -439,6 +439,25 @@ static char powercycle(struct rtimer *t, void *ptr) {
   PT_END(&pt);
 }
 /*---------------------------------------------------------------------------*/
+static int broadcast_rate_drop(void) {
+#if CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT
+  if (!timer_expired(&broadcast_rate_timer)) {
+    broadcast_rate_counter++;
+    if (broadcast_rate_counter < CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT) {
+      return 0;
+    } else {
+      return 1;
+    }
+  } else {
+    timer_set(&broadcast_rate_timer, CLOCK_SECOND);
+    broadcast_rate_counter = 0;
+    return 0;
+  }
+#else  /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
+  return 0;
+#endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
+}
+/*---------------------------------------------------------------------------*/
 static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
                        struct rdc_buf_list *buf_list) {
   rtimer_clock_t t0;
@@ -474,6 +493,9 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     is_broadcast = 1;
     PRINTDEBUG("contikimac-aloha: send broadcast\n");
 
+    if (broadcast_rate_drop()) {
+      return MAC_TX_COLLISION;
+    }
   } else {
 #if NETSTACK_CONF_WITH_IPV6
     PRINTDEBUG("contikimac-aloha: send unicast to "
@@ -535,7 +557,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   contikimac_was_on = contikimac_is_on;
   contikimac_is_on = 1;
 
-#if !RDC_CONF_HARDWARE_ACK
   if (!is_broadcast) {
     /* Turn radio on to receive expected unicast ack.  Not necessary
        with hardware ack detection, and may trigger an unnecessary cca
@@ -543,10 +564,10 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     on();
   }
   seqno = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
-#endif
 
   watchdog_periodic();
   t0 = RTIMER_NOW();
+  printf("send packet\n");
   NETSTACK_RADIO.transmit(transmit_len);
 
   while (RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + INTER_PACKET_INTERVAL)) {
@@ -566,88 +587,7 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     }
   }
 
-  //   for (strobes = 0;
-  //        got_strobe_ack == 0 && RTIMER_CLOCK_LT(RTIMER_NOW(), t0 +
-  //        STROBE_TIME); strobes++) {
-
-  //     watchdog_periodic();
-
-  //     if (!is_broadcast && (is_known_receiver) &&
-  //         !RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + MAX_PHASE_STROBE_TIME)) {
-  //       PRINTF("miss to %d\n",
-  //       packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0]); break;
-  //     }
-
-  // #if !RDC_CONF_HARDWARE_ACK
-  //     len = 0;
-  // #endif
-
-  //     {
-  //       rtimer_clock_t wt;
-
-  // #if RDC_CONF_HARDWARE_ACK
-  //       int ret = NETSTACK_RADIO.transmit(transmit_len);
-  // #else
-  //       NETSTACK_RADIO.transmit(transmit_len);
-  // #endif
-
-  // #if RDC_CONF_HARDWARE_ACK
-  //       /* For radios that block in the transmit routine and detect the
-  //          ACK in hardware */
-  //       if (ret == RADIO_TX_OK) {
-  //         if (!is_broadcast) {
-  //           got_strobe_ack = 1;
-  //           break;
-  //         }
-  //       } else if (ret == RADIO_TX_NOACK) {
-  //       }
-  //       wt = RTIMER_NOW();
-  //       while (RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) {
-  //       }
-  // #else  /* RDC_CONF_HARDWARE_ACK */
-  //       /* Wait for the ACK packet */
-  //       wt = RTIMER_NOW();
-  //       while (RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) {
-  //       }
-
-  //       if (!is_broadcast && (NETSTACK_RADIO.receiving_packet() ||
-  //                             NETSTACK_RADIO.pending_packet())) {
-  //         uint8_t ackbuf[ACK_LEN];
-  //         wt = RTIMER_NOW();
-  //         while (
-  //             RTIMER_CLOCK_LT(RTIMER_NOW(), wt +
-  //             AFTER_ACK_DETECTED_WAIT_TIME)) {
-  //         }
-
-  //         len = NETSTACK_RADIO.read(ackbuf, ACK_LEN);
-  //         if (len == ACK_LEN && seqno == ackbuf[ACK_LEN - 1]) {
-  //           got_strobe_ack = 1;
-  //           break;
-  //         }
-  //       }
-  // #endif /* RDC_CONF_HARDWARE_ACK */
-  //     }
-  //   }
-
   off();
-
-  PRINTF("contikimac-aloha: send (strobes=%u, len=%u, %s), done\n", strobes,
-         packetbuf_totlen(), got_strobe_ack ? "ack" : "no ack");
-
-#if CONTIKIMAC_CONF_COMPOWER
-  /* Accumulate the power consumption for the packet transmission. */
-  compower_accumulate(&current_packet);
-
-  /* Convert the accumulated power consumption for the transmitted
-     packet to packet attributes so that the higher levels can keep
-     track of the amount of energy spent on transmitting the
-     packet. */
-  compower_attrconv(&current_packet);
-
-  /* Clear the accumulated power consumption so that it is ready for
-     the next packet. */
-  compower_clear(&current_packet);
-#endif /* CONTIKIMAC_CONF_COMPOWER */
 
   contikimac_is_on = contikimac_was_on;
   we_are_sending = 0;
