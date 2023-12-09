@@ -149,11 +149,11 @@ static struct neighbor_queue *neighbor_queue_from_addr(const linkaddr_t *addr) {
 }
 /*---------------------------------------------------------------------------*/
 static void transmit_packet_list(void *ptr) {
+  printf("aloha: transmit_packet_list\n");
   struct neighbor_queue *n = ptr;
   if (n) {
     struct rdc_buf_list *q = list_head(n->queued_packet_list);
     PRINTF("aloha: transmit_packet_list %d %p\n", n->transmissions, q);
-    printf("aloha: transmit_packet_list %d %p\n", n->transmissions, q);
     if (q != NULL) {
       PRINTF("aloha: preparing number %d %p, queue len %d\n", n->transmissions,
              q, list_length(n->queued_packet_list));
@@ -165,8 +165,7 @@ static void transmit_packet_list(void *ptr) {
 /*---------------------------------------------------------------------------*/
 static void schedule_transmission(struct neighbor_queue *n) {
   clock_time_t delay = random_rand() % 10;
-
-  printf("aloha: scheduling transmission in %u ticks\n", (unsigned)delay);
+  printf("aloha: schedule_transmission %d\n", delay);
   ctimer_set(&n->transmit_timer, delay, transmit_packet_list, n);
 }
 /*---------------------------------------------------------------------------*/
@@ -210,6 +209,7 @@ static void tx_done(int status, struct rdc_buf_list *q,
   switch (status) {
   case MAC_TX_OK:
     // PRINTF("aloha: rexmit ok %d\n", n->transmissions);
+    printf("aloha: tx_done ok %d\n", n->transmissions);
     break;
   case MAC_TX_COLLISION:
   case MAC_TX_NOACK:
@@ -285,15 +285,18 @@ static void packet_sent(void *ptr, int status, int num_transmissions) {
 
   switch (status) {
   case MAC_TX_OK:
+    printf("aloha: tx_ok\n");
     tx_ok(q, n, num_transmissions);
     break;
   case MAC_TX_NOACK:
     PRINTF("aloha: noack received for packet %p\n", q);
+    printf("aloha: noack received for packet %p\n", q);
     noack(q, n, num_transmissions);
     break;
   case MAC_TX_COLLISION:
     // collision(q, n, num_transmissions);
-    PRINTF("aloha: collision on %p\n", q);
+    // PRINTF("aloha: collision on %p\n", q);
+
     break;
   case MAC_TX_DEFERRED:
     break;
