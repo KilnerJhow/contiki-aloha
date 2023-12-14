@@ -345,7 +345,7 @@ static char powercycle(struct rtimer *t, void *ptr) {
              false positive: a spurious radio interference that was not
              caused by an incoming packet. */
         if (NETSTACK_RADIO.channel_clear() == 0) {
-          printf("packet seen\n");
+          // printf("packet seen\n");
           packet_seen = 1;
           break;
         }
@@ -388,7 +388,7 @@ static char powercycle(struct rtimer *t, void *ptr) {
         }
         if (silence_periods > MAX_SILENCE_PERIODS) {
           // powercycle_turn_radio_off();
-          printf("silence_periods > MAX_SILENCE_PERIODS\n");
+          // printf("silence_periods > MAX_SILENCE_PERIODS\n");
           break;
         }
         if (WITH_FAST_SLEEP && periods > MAX_NONACTIVITY_PERIODS &&
@@ -541,8 +541,9 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     we_are_sending = 0;
     PRINTF("contikimac-aloha: collision receiving %d, pending %d\n",
            NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
-    printf("contikimac-aloha: collision receiving %d, pending %d\n",
-           NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
+    // printf("contikimac-aloha: collision receiving %d, pending %d\n",
+    //        NETSTACK_RADIO.receiving_packet(),
+    //        NETSTACK_RADIO.pending_packet());
     return MAC_TX_COLLISION;
   }
 
@@ -571,8 +572,8 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   watchdog_periodic();
   if (is_broadcast) {
     t0 = RTIMER_NOW();
-    printf("send broadcast\n");
-    for (strobes = 0;
+    // printf("send broadcast\n");
+    for (strobes = 0; /* strobes == 1; */
          got_strobe_ack == 0 && RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME);
          strobes++) {
 
@@ -611,18 +612,19 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       }
     }
   } else {
-    watchdog_periodic();
-    t0 = RTIMER_NOW();
-    printf("send packet\n");
-    NETSTACK_RADIO.transmit(transmit_len);
 
-    while (RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + INTER_PACKET_INTERVAL)) {
+    rtimer_clock_t wt;
+
+    NETSTACK_RADIO.transmit(transmit_len);
+    wt = RTIMER_NOW();
+    while (RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) {
     }
-    printf("contikimac-aloha: after INTER_PACKET_INTERVAL\n");
-    t0 = RTIMER_NOW();
-    if (NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet()) {
+
+    if (!is_broadcast && (NETSTACK_RADIO.receiving_packet() ||
+                          NETSTACK_RADIO.pending_packet())) {
       uint8_t ackbuf[ACK_LEN];
-      while (RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + AFTER_ACK_DETECTED_WAIT_TIME)) {
+      wt = RTIMER_NOW();
+      while (RTIMER_CLOCK_LT(RTIMER_NOW(), wt + AFTER_ACK_DETECTED_WAIT_TIME)) {
       }
 
       len = NETSTACK_RADIO.read(ackbuf, ACK_LEN);
@@ -645,7 +647,7 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   } else {
     ret = MAC_TX_OK;
   }
-  printf("send packet ret %d\n", ret);
+  // printf("send packet ret %d\n", ret);
   return ret;
 }
 /*---------------------------------------------------------------------------*/

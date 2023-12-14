@@ -85,6 +85,18 @@ AUTOSTART_PROCESSES(&example_collect_process);
 /*---------------------------------------------------------------------------*/
 static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
 
+  if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null)) {
+    // Este pacote é um broadcast
+    // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+    //        originator->u8[0], originator->u8[1], seqno, hops,
+    //        packetbuf_datalen(), (char *)packetbuf_dataptr());
+    return;
+  }
+
+  // printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+  //        originator->u8[0], originator->u8[1], seqno, hops,
+  //        packetbuf_datalen(), (char *)packetbuf_dataptr());
+
   if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
 
     uint8_t d = _Dist / hops;
@@ -97,7 +109,8 @@ static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
        Nb: tamanho do Pacote
     */
     // Eihop,P0, i,d,R,Nb
-    printf("%s,%d,%u,%u,%u \n", (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+    printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
+           (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
   }
 }
 
@@ -112,7 +125,9 @@ PROCESS_THREAD(example_collect_process, ev, data) {
 
   // CRIACAO DO PACOTE
   powertrace_print("");
-  char *packet = malloc(_Nb);
+  // char *packet = malloc(_Nb);
+  char packet[_Nb];
+  // "abcedefghijklmnopqrstuvwxyzabcedefghijklmnopqrstuvwxyz";
   sprintf(packet, "%u.%02u,%u.%02u", (uint16_t)_Eihop / 1000,
           (uint16_t)_Eihop % 1000, (uint16_t)_P0 / 1000, (uint16_t)_P0 % 1000);
 
@@ -126,15 +141,18 @@ PROCESS_THREAD(example_collect_process, ev, data) {
   }
 
   // Aguarde algum tempo para que a rede se estabilize.
-  etimer_set(&et, 120 * CLOCK_SECOND);
+  etimer_set(&et, 30 * CLOCK_SECOND);
   PROCESS_WAIT_UNTIL(etimer_expired(&et));
   printf("Starting to sense\n");
 
   while (1) {
 
     // Envio de pacote a cada 30 segundos.
-    etimer_set(&periodic, CLOCK_SECOND * 30);
-    etimer_set(&et, random_rand() % (CLOCK_SECOND * 30));
+    // printf("Starting to sense\n");
+    etimer_set(&periodic, CLOCK_SECOND * 5);
+    // printf("periodic timer set");
+    etimer_set(&et, random_rand() % (CLOCK_SECOND * 5));
+    // printf("et timer set");
 
     PROCESS_WAIT_UNTIL(etimer_expired(&et));
     {
@@ -144,7 +162,10 @@ PROCESS_THREAD(example_collect_process, ev, data) {
       // printf("Sending\n");
       // packetbuf_set_datalen(_Nb);
       packetbuf_clear();
+      // printf("Sending %s\n", packet);
       packetbuf_set_datalen(sprintf(packetbuf_dataptr(), "%s", packet) + 1);
+      // printf("Sending %s\n", (char *)packetbuf_dataptr());
+      // printf("Length %d\n", packetbuf_datalen());
 
       energest_flush();
       collect_send(&tc, 15);
@@ -163,10 +184,11 @@ PROCESS_THREAD(example_collect_process, ev, data) {
     }
 
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
-
-    free(packet);
+    // printf("Periodic\n");
   }
+  // free(packet);
 
+  printf("Process end\n");
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
