@@ -61,6 +61,7 @@ tools/cooja/apps/avrora/lib/cooja_avrora.jar
 tools/cooja/apps/collect-view/cooja-collect-view.jar
 tools/mspsim/**
 tools/mspsim
+mspsim.jar
 
 # sdcc build artifacts
 contiki-cc2530dk.lib
