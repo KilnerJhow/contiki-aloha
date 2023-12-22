@@ -13,12 +13,17 @@
     "leds.h": "c",
     "netstack.h": "c",
     "rtimer-arch.h": "c",
-    "rtimer.h": "c"
+    "rtimer.h": "c",
+    "collect.h": "c"
   },
   "C_Cpp.autocompleteAddParentheses": true,
   "C_Cpp.default.includePath": [
     "${default}",
     "/home/jonathan/contiki-aloha/core/sys/rtimer.h",
-    "/home/jonathan/contiki-aloha/core/sys/rtimer.c"
-  ]
+    "/home/jonathan/contiki-aloha/core/sys/rtimer.c",
+    "/home/jonathan/contiki-aloha/core/contiki-default-conf.h",
+    "/home/jonathan/contiki-aloha/core/contiki.h"
+  ],
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  "C_Cpp.vcFormat.indent.caseContents": true
 }
