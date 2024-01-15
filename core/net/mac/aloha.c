@@ -38,22 +38,18 @@
  */
 
 #include "net/mac/aloha.h"
-#include "net/packetbuf.h"
-#include "net/queuebuf.h"
 
-#include "sys/clock.h"
-#include "sys/ctimer.h"
-
-#include "lib/random.h"
-
-#include "net/netstack.h"
+#include <stdio.h>
+#include <string.h>
 
 #include "lib/list.h"
 #include "lib/memb.h"
-
-#include <string.h>
-
-#include <stdio.h>
+#include "lib/random.h"
+#include "net/netstack.h"
+#include "net/packetbuf.h"
+#include "net/queuebuf.h"
+#include "sys/clock.h"
+#include "sys/ctimer.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -149,7 +145,6 @@ static struct neighbor_queue *neighbor_queue_from_addr(const linkaddr_t *addr) {
 }
 /*---------------------------------------------------------------------------*/
 static void transmit_packet_list(void *ptr) {
-  // printf("aloha: transmit_packet_list\n");
   struct neighbor_queue *n = ptr;
   if (n) {
     struct rdc_buf_list *q = list_head(n->queued_packet_list);
@@ -163,9 +158,14 @@ static void transmit_packet_list(void *ptr) {
   }
 }
 /*---------------------------------------------------------------------------*/
+/**
+ * @brief Schedule next transmission
+ *
+ * @param n
+ */
 static void schedule_transmission(struct neighbor_queue *n) {
   clock_time_t delay = (random_rand() % 10) + 1;
-  // printf("aloha: schedule_transmission %d\n", delay);
+
   ctimer_set(&n->transmit_timer, delay, transmit_packet_list, n);
 }
 /*---------------------------------------------------------------------------*/
@@ -207,25 +207,26 @@ static void tx_done(int status, struct rdc_buf_list *q,
   ntx = n->transmissions;
 
   switch (status) {
-  case MAC_TX_OK:
-    // PRINTF("aloha: rexmit ok %d\n", n->transmissions);
-    // printf("aloha: tx_done ok %d\n", n->transmissions);
-    break;
-  case MAC_TX_COLLISION:
-  case MAC_TX_NOACK:
-    // PRINTF("aloha: drop with status %d after %d transmissions\n", status,
-    //        n->transmissions);
-    break;
-  default:
-    // PRINTF("aloha: rexmit failed %d: %d\n", n->transmissions, status);
-    break;
+    case MAC_TX_OK:
+      PRINTF("aloha: send_packet_again ok %d\n", n->transmissions);
+      break;
+    case MAC_TX_COLLISION:
+    case MAC_TX_NOACK:
+      PRINTF("aloha: drop with status %d after %d transmissions\n", status,
+             n->transmissions);
+      break;
+    default:
+      PRINTF("aloha: send_packet_again failed %d: %d\n", n->transmissions,
+             status);
+      break;
   }
 
   free_packet(n, q, status);
   mac_call_sent_callback(sent, cptr, status, ntx);
 }
 /*---------------------------------------------------------------------------*/
-static void rexmit(struct rdc_buf_list *q, struct neighbor_queue *n) {
+static void send_packet_again(struct rdc_buf_list *q,
+                              struct neighbor_queue *n) {
   schedule_transmission(n);
   /* This is needed to correctly attribute energy that we spent
      transmitting this packet. */
@@ -245,7 +246,7 @@ static void noack(struct rdc_buf_list *q, struct neighbor_queue *n,
     tx_done(MAC_TX_NOACK, q, n);
   } else {
     // PRINTF("aloha: noack %d\n", n->transmissions);
-    rexmit(q, n);
+    send_packet_again(q, n);
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -284,25 +285,19 @@ static void packet_sent(void *ptr, int status, int num_transmissions) {
   PRINTF("aloha: packet_sent %d %d\n", status, num_transmissions);
 
   switch (status) {
-  case MAC_TX_OK:
-    // printf("aloha: tx_ok\n");
-    tx_ok(q, n, num_transmissions);
-    break;
-  case MAC_TX_NOACK:
-    PRINTF("aloha: noack received for packet %p\n", q);
-    // printf("aloha: noack received for packet %p\n", q);
-    noack(q, n, num_transmissions);
-    break;
-  case MAC_TX_COLLISION:
-    // collision(q, n, num_transmissions);
-    // PRINTF("aloha: collision on %p\n", q);
-
-    break;
-  case MAC_TX_DEFERRED:
-    break;
-  default:
-    tx_done(status, q, n);
-    break;
+    case MAC_TX_OK:
+      tx_ok(q, n, num_transmissions);
+      break;
+    case MAC_TX_NOACK:
+      PRINTF("aloha: noack received for packet %p\n", q);
+      noack(q, n, num_transmissions);
+      break;
+    case MAC_TX_COLLISION:
+    case MAC_TX_DEFERRED:
+      break;
+    default:
+      tx_done(status, q, n);
+      break;
   }
 }
 /*---------------------------------------------------------------------------*/

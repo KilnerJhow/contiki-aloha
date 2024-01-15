@@ -93,25 +93,26 @@ static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
     return;
   }
 
-  // printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-  //        originator->u8[0], originator->u8[1], seqno, hops,
-  //        packetbuf_datalen(), (char *)packetbuf_dataptr());
+  printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+         originator->u8[0], originator->u8[1], seqno, hops, packetbuf_datalen(),
+         (char *)packetbuf_dataptr());
 
-  if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
-    uint8_t d = _Dist / hops;
+  // if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
+  //   uint8_t d = _Dist / hops;
 
-    /* Eihop: Consumo Energetico Por i saltos
-       P0: potência de transmissão
-       i: numero de saltos de uma transmissão
-       d: distância entre os nós
-       R: taxa de Transmissão
-       Nb: tamanho do Pacote
-    */
-    // Eihop,P0, i,d,R,Nb
-    // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
-    //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
-    printf("%s,%d,%u,%u,%u \n", (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
-  }
+  //   /* Eihop: Consumo Energetico Por i saltos
+  //      P0: potência de transmissão
+  //      i: numero de saltos de uma transmissão
+  //      d: distância entre os nós
+  //      R: taxa de Transmissão
+  //      Nb: tamanho do Pacote
+  //   */
+  //   // Eihop,P0, i,d,R,Nb
+  //   // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
+  //   //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+  //   printf("%s,%d,%u,%u,%u \n", (char *)packetbuf_dataptr(), hops, d, _R,
+  //   _Nb);
+  // }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -141,7 +142,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
   }
 
   // Aguarde algum tempo para que a rede se estabilize.
-  etimer_set(&et, 30 * CLOCK_SECOND);
+  etimer_set(&et, 120 * CLOCK_SECOND);
   PROCESS_WAIT_UNTIL(etimer_expired(&et));
   printf("Starting to sense\n");
 

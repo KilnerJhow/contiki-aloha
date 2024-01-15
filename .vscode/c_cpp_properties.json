@@ -4,7 +4,10 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/home/jonathan/contiki-aloha/core/**",
+                "/home/jonathan/contiki-aloha/apps/**",
+                "/home/jonathan/contiki-aloha/cpu/msp430/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc"

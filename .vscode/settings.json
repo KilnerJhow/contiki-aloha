@@ -1,28 +1,8 @@
 {
-  "files.associations": {
-    "list.h": "c",
-    "sht11-sensor.h": "c",
-    "contiki.h": "c",
-    "rime.h": "c",
-    "packetbuf.h": "c",
-    "csma.h": "c",
-    "contiki-conf.h": "c",
-    "contiki-default-conf.h": "c",
-    "battery-sensor.h": "c",
-    "powertrace.h": "c",
-    "leds.h": "c",
-    "netstack.h": "c",
-    "rtimer-arch.h": "c",
-    "rtimer.h": "c",
-    "collect.h": "c"
-  },
   "C_Cpp.autocompleteAddParentheses": true,
   "C_Cpp.default.includePath": [
     "${default}",
-    "/home/jonathan/contiki-aloha/core/sys/rtimer.h",
-    "/home/jonathan/contiki-aloha/core/sys/rtimer.c",
-    "/home/jonathan/contiki-aloha/core/contiki-default-conf.h",
-    "/home/jonathan/contiki-aloha/core/contiki.h"
+    "${workspaceFolder}/**",
   ],
   "C_Cpp.clang_format_fallbackStyle": "Google",
   "C_Cpp.vcFormat.indent.caseContents": true
