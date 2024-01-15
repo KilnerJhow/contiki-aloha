@@ -1,11 +1,12 @@
 /*---------------------------------------------------------------------------*/
 /*-------------------------------LIBS----------------------------------------*/
 /*---------------------------------------------------------------------------*/
-#include "contiki.h"
-#include "lib/random.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "contiki.h"
+#include "lib/random.h"
 
 // transmission
 #include "dev/button-sensor.h"
@@ -19,13 +20,13 @@
 #include "powertrace.h"
 
 // VARIAVEIS DO TMOTE SKY
-#define _Nb 90 // tamanho do pacote
+#define _Nb 90  // tamanho do pacote
 static uint32_t _Eihop, _P0;
 static uint8_t _Dist = 245;
-static uint8_t _R = 250; // TMOTE SKY
+static uint8_t _R = 250;  // TMOTE SKY
 
 // VARIAVEIS DO TMOTE SKY (mA)
-static double voltage = 3.6; // Volts
+static double voltage = 3.6;  // Volts
 static double tx = 0.0195 * 1000;
 static double rx = 0.0218 * 1000;
 static double cpu = 0.0000545 * 1000;
@@ -37,8 +38,7 @@ static struct collect_conn tc;
 /*---------------------------------------------------------------------------*/
 /*-------------------------------CODE----------------------------------------*/
 /*---------------------------battery status-----------------------------------*/
-void powertrace_print(char *str)
-{
+void powertrace_print(char *str) {
   static uint32_t last_cpu, last_lpm, last_transmit, last_listen;
   uint32_t current_cpu, current_idle, current_tx_mode, current_rx_mode;
   uint32_t all_cpu, all_lpm, all_transmit, all_listen;
@@ -84,24 +84,20 @@ void powertrace_print(char *str)
 PROCESS(example_collect_process, "Test collect process");
 AUTOSTART_PROCESSES(&example_collect_process);
 /*---------------------------------------------------------------------------*/
-static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops)
-{
+static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
+  if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null)) {
+    // Este pacote é um broadcast
+    // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+    //        originator->u8[0], originator->u8[1], seqno, hops,
+    //        packetbuf_datalen(), (char *)packetbuf_dataptr());
+    return;
+  }
 
-  // if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null)) {
-  //   // Este pacote é um broadcast
-  //   // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-  //   //        originator->u8[0], originator->u8[1], seqno, hops,
-  //   //        packetbuf_datalen(), (char *)packetbuf_dataptr());
-  //   return;
-  // }
+  printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+         originator->u8[0], originator->u8[1], seqno, hops, packetbuf_datalen(),
+         (char *)packetbuf_dataptr());
 
-  // printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-  //        originator->u8[0], originator->u8[1], seqno, hops,
-  //        packetbuf_datalen(), (char *)packetbuf_dataptr());
-
-  if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0))
-  {
-
+  if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
     uint8_t d = _Dist / hops;
 
     /* Eihop: Consumo Energetico Por i saltos
@@ -114,8 +110,7 @@ static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops)
     // Eihop,P0, i,d,R,Nb
     // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
     //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
-    printf("%s,%d,%u,%u,%u\n",
-           (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+    printf("%s,%d,%u,%u,%u\n", (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
   }
 }
 
@@ -124,8 +119,7 @@ static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops)
 /*---------------------------------------------------------------------------*/
 static const struct collect_callbacks callbacks = {recv};
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(example_collect_process, ev, data)
-{
+PROCESS_THREAD(example_collect_process, ev, data) {
   static struct etimer periodic;
   static struct etimer et;
 
@@ -141,8 +135,7 @@ PROCESS_THREAD(example_collect_process, ev, data)
 
   collect_open(&tc, 130, COLLECT_ROUTER, &callbacks);
 
-  if (linkaddr_node_addr.u8[0] == 1 && linkaddr_node_addr.u8[1] == 0)
-  {
+  if (linkaddr_node_addr.u8[0] == 1 && linkaddr_node_addr.u8[1] == 0) {
     // printf("I am sink\n");
     collect_set_sink(&tc, 1);
   }
@@ -152,9 +145,7 @@ PROCESS_THREAD(example_collect_process, ev, data)
   PROCESS_WAIT_UNTIL(etimer_expired(&et));
   printf("Starting to sense\n");
 
-  while (1)
-  {
-
+  while (1) {
     // Envio de pacote a cada 30 segundos.
     // printf("Starting to sense\n");
     etimer_set(&periodic, CLOCK_SECOND * 5);
@@ -180,14 +171,11 @@ PROCESS_THREAD(example_collect_process, ev, data)
 
       parent = collect_parent(&tc);
 
-      if (!linkaddr_cmp(parent, &oldparent))
-      {
-        if (!linkaddr_cmp(&oldparent, &linkaddr_null))
-        {
+      if (!linkaddr_cmp(parent, &oldparent)) {
+        if (!linkaddr_cmp(&oldparent, &linkaddr_null)) {
           printf("#L %d 0\n", oldparent.u8[0]);
         }
-        if (!linkaddr_cmp(parent, &linkaddr_null))
-        {
+        if (!linkaddr_cmp(parent, &linkaddr_null)) {
           printf("#L %d 1\n", parent->u8[0]);
         }
         linkaddr_copy(&oldparent, parent);

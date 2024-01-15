@@ -398,7 +398,10 @@ static void send_packet(mac_callback_t sent, void *ptr) {
   mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
 }
 /*---------------------------------------------------------------------------*/
-static void input_packet(void) { NETSTACK_LLSEC.input(); }
+static void input_packet(void) {
+  NETSTACK_LLSEC.input();
+  // print the packet received
+}
 /*---------------------------------------------------------------------------*/
 static int on(void) { return NETSTACK_RDC.on(); }
 /*---------------------------------------------------------------------------*/
