@@ -210,16 +210,16 @@ static void tx_done(int status, struct rdc_buf_list *q,
 
   switch (status) {
     case MAC_TX_OK:
-      PRINTF("aloha: send_packet_again ok %d\n", n->transmissions);
+      // PRINTF("aloha: rexmit ok %d\n", n->transmissions);
+      // printf("aloha: tx_done ok %d\n", n->transmissions);
       break;
     case MAC_TX_COLLISION:
     case MAC_TX_NOACK:
-      PRINTF("aloha: drop with status %d after %d transmissions\n", status,
-             n->transmissions);
+      // PRINTF("aloha: drop with status %d after %d transmissions\n", status,
+      //        n->transmissions);
       break;
     default:
-      PRINTF("aloha: send_packet_again failed %d: %d\n", n->transmissions,
-             status);
+      // PRINTF("aloha: rexmit failed %d: %d\n", n->transmissions, status);
       break;
   }
 
@@ -288,13 +288,19 @@ static void packet_sent(void *ptr, int status, int num_transmissions) {
 
   switch (status) {
     case MAC_TX_OK:
+      // printf("aloha: tx_ok\n");
       tx_ok(q, n, num_transmissions);
       break;
     case MAC_TX_NOACK:
       PRINTF("aloha: noack received for packet %p\n", q);
+      // printf("aloha: noack received for packet %p\n", q);
       noack(q, n, num_transmissions);
       break;
     case MAC_TX_COLLISION:
+      // collision(q, n, num_transmissions);
+      // PRINTF("aloha: collision on %p\n", q);
+
+      break;
     case MAC_TX_DEFERRED:
       break;
     default:

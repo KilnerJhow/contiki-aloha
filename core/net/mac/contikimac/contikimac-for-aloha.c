@@ -573,7 +573,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       }
     }
   } else {
-    // printf("send unicast\n");
     rtimer_clock_t wt;
 
     NETSTACK_RADIO.transmit(transmit_len);
