@@ -169,6 +169,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
 
       energest_flush();
       collect_send(&tc, 15);
+      printf("Sending %s\n", (char *)packetbuf_dataptr());
 
       parent = collect_parent(&tc);
 

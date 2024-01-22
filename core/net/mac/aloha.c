@@ -164,8 +164,10 @@ static void transmit_packet_list(void *ptr) {
  * @param n
  */
 static void schedule_transmission(struct neighbor_queue *n) {
-  clock_time_t delay = (random_rand() % 10) + 1;
-
+  clock_time_t delay = ((random_rand() % 5) * 5) + 5;
+  // 8 -> 60ms
+  // 3 ->
+  // printf("aloha: schedule_transmission %u\n", delay);
   ctimer_set(&n->transmit_timer, delay, transmit_packet_list, n);
 }
 /*---------------------------------------------------------------------------*/
