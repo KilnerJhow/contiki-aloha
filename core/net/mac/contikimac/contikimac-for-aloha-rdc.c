@@ -155,7 +155,7 @@ static int we_are_receiving_burst = 0;
 #endif
 
 // #define CCA_ACTIVE_TIME 90
-#define CCA_ACTIVE_TIME 150
+#define CCA_ACTIVE_TIME 500
 
 /* Before starting a transmission, Contikimac checks the availability
    of the channel with CCA_COUNT_MAX_TX consecutive CCAs */
@@ -732,7 +732,7 @@ static void init(void) {
   PT_INIT(&pt);
 
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-
+  printf("CCA_ACTIVE_TIME: %d\n", CCA_ACTIVE_TIME);
   contikimac_is_on = 1;
 }
 /*---------------------------------------------------------------------------*/
