@@ -22,7 +22,7 @@
 // VARIAVEIS DO TMOTE SKY
 #define _Nb 90  // tamanho do pacote
 static uint32_t _Eihop, _P0;
-static uint8_t _Dist = 245;
+static uint8_t _Dist = 135;
 static uint8_t _R = 250;  // TMOTE SKY
 
 // VARIAVEIS DO TMOTE SKY (mA)
@@ -85,18 +85,6 @@ PROCESS(example_collect_process, "Test collect process");
 AUTOSTART_PROCESSES(&example_collect_process);
 /*---------------------------------------------------------------------------*/
 static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
-  if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null)) {
-    // Este pacote é um broadcast
-    // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-    //        originator->u8[0], originator->u8[1], seqno, hops,
-    //        packetbuf_datalen(), (char *)packetbuf_dataptr());
-    return;
-  }
-
-  printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-         originator->u8[0], originator->u8[1], seqno, hops, packetbuf_datalen(),
-         (char *)packetbuf_dataptr());
-
   if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
     uint8_t d = _Dist / hops;
 
@@ -158,13 +146,9 @@ PROCESS_THREAD(example_collect_process, ev, data) {
       static linkaddr_t oldparent;
       const linkaddr_t *parent;
 
-      // printf("Sending\n");
-      // packetbuf_set_datalen(_Nb);
+      packetbuf_set_datalen(_Nb);
       packetbuf_clear();
-      // printf("Sending %s\n", packet);
       packetbuf_set_datalen(sprintf(packetbuf_dataptr(), "%s", packet) + 1);
-      // printf("Sending %s\n", (char *)packetbuf_dataptr());
-      // printf("Length %d\n", packetbuf_datalen());
 
       energest_flush();
       collect_send(&tc, 15);
@@ -183,9 +167,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
     }
 
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
-    // printf("Periodic\n");
   }
-  // free(packet);
 
   printf("Process end\n");
   PROCESS_END();

@@ -85,34 +85,34 @@ PROCESS(example_collect_process, "Test collect process");
 AUTOSTART_PROCESSES(&example_collect_process);
 /*---------------------------------------------------------------------------*/
 static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
-  if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null)) {
-    // Este pacote é um broadcast
-    // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-    //        originator->u8[0], originator->u8[1], seqno, hops,
-    //        packetbuf_datalen(), (char *)packetbuf_dataptr());
-    return;
-  }
-
-  printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-         originator->u8[0], originator->u8[1], seqno, hops, packetbuf_datalen(),
-         (char *)packetbuf_dataptr());
-
-  // if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
-  //   uint8_t d = _Dist / hops;
-
-  //   /* Eihop: Consumo Energetico Por i saltos
-  //      P0: potência de transmissão
-  //      i: numero de saltos de uma transmissão
-  //      d: distância entre os nós
-  //      R: taxa de Transmissão
-  //      Nb: tamanho do Pacote
-  //   */
-  //   // Eihop,P0, i,d,R,Nb
-  //   // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
-  //   //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
-  //   printf("%s,%d,%u,%u,%u \n", (char *)packetbuf_dataptr(), hops, d, _R,
-  //   _Nb);
+  // if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null))
+  // {
+  //   // Este pacote é um broadcast
+  //   // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+  //   //        originator->u8[0], originator->u8[1], seqno, hops,
+  //   //        packetbuf_datalen(), (char *)packetbuf_dataptr());
+  //   return;
   // }
+
+  // printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
+  //        originator->u8[0], originator->u8[1], seqno, hops,
+  //        packetbuf_datalen(), (char *)packetbuf_dataptr());
+
+  if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
+    uint8_t d = _Dist / hops;
+
+    /* Eihop: Consumo Energetico Por i saltos
+       P0: potência de transmissão
+       i: numero de saltos de uma transmissão
+       d: distância entre os nós
+       R: taxa de Transmissão
+       Nb: tamanho do Pacote
+    */
+    // Eihop,P0, i,d,R,Nb
+    // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
+    //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+    printf("%s,%d,%u,%u,%u \n", (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+  }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -169,7 +169,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
 
       energest_flush();
       collect_send(&tc, 15);
-      printf("Sending %s\n", (char *)packetbuf_dataptr());
+      // printf("Sending %s\n", (char *)packetbuf_dataptr());
 
       parent = collect_parent(&tc);
 

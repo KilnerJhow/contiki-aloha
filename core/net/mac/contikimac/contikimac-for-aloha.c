@@ -154,6 +154,9 @@ static int we_are_receiving_burst = 0;
 #define CCA_COUNT_MAX 2
 #endif
 
+// #define CCA_ACTIVE_TIME 90
+#define CCA_ACTIVE_TIME 150
+
 /* Before starting a transmission, Contikimac checks the availability
    of the channel with CCA_COUNT_MAX_TX consecutive CCAs */
 #ifdef CONTIKIMAC_CONF_CCA_COUNT_MAX_TX
@@ -207,10 +210,6 @@ static volatile unsigned char radio_is_on = 0;
 #define PRINTF(...)
 #define PRINTDEBUG(...)
 #endif
-
-#if CONTIKIMAC_CONF_COMPOWER
-static struct compower_activity current_packet;
-#endif /* CONTIKIMAC_CONF_COMPOWER */
 
 #define DEFAULT_STREAM_TIME (4 * CYCLE_TIME)
 
@@ -315,7 +314,6 @@ static char powercycle(struct rtimer *t, void *ptr) {
     static rtimer_clock_t start;
 
     packet_seen = 0;
-    static uint8_t packet_check_count = 0;
     for (count = 0; count < CCA_COUNT_MAX; ++count) {
       // printf("packet_check_count %d\n", packet_check_count);
       if (we_are_sending == 0 && we_are_receiving_burst == 0) {
@@ -327,15 +325,8 @@ static char powercycle(struct rtimer *t, void *ptr) {
              false positive: a spurious radio interference that was not
              caused by an incoming packet. */
         start = RTIMER_NOW();
-        while (RTIMER_CLOCK_LT(RTIMER_NOW(), (start + 100))) {
-          // printf("inside while\n");
-          // PRINTF("RTIMER_CLOCK_LT(RTIMER_NOW(), cca_listen_period + 10)\n");
-          // printf("1");
-          // printf(
-          //     "RTIMER_CLOCK_LT(RTIMER_NOW(), cca_listen_period + "
-          //     "CCA_SLEEP_TIME)\n");
+        while (RTIMER_CLOCK_LT(RTIMER_NOW(), (start + CCA_ACTIVE_TIME))) {
           if (NETSTACK_RADIO.channel_clear() == 0) {
-            // printf("packet seen\n");
             packet_seen = 1;
             powercycle_turn_radio_on();
             break;
@@ -360,7 +351,6 @@ static char powercycle(struct rtimer *t, void *ptr) {
       start = RTIMER_NOW();
 
       periods = silence_periods = 0;
-      int packet_check_count = 0;
       while (we_are_sending == 0 && radio_is_on &&
              RTIMER_CLOCK_LT(RTIMER_NOW(),
                              (start + LISTEN_TIME_AFTER_PACKET_DETECTED))) {
@@ -530,8 +520,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
      packet will be retransmitted later by the MAC protocol
      instread. */
   if (NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet()) {
-    printf("collision receiving %d, pending %d\n",
-           NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
     we_are_sending = 0;
     PRINTF("contikimac-aloha: collision receiving %d, pending %d\n",
            NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
@@ -704,8 +692,6 @@ static void recv_burst_off(void *ptr) {
 static void input_packet(void) {
   static struct ctimer ct;
   int duplicate = 0;
-
-  printf("input packet\n");
 
 #if CONTIKIMAC_SEND_SW_ACK
   int original_datalen;
