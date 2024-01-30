@@ -37,6 +37,8 @@
  *         Joakim Eriksson <joakime@sics.se>
  */
 
+#include "net/mac/contikimac/contikimac-for-aloha-radio-always-on.h"
+
 #include <string.h>
 
 #include "contiki-conf.h"
@@ -44,7 +46,6 @@
 #include "dev/radio.h"
 #include "dev/watchdog.h"
 #include "lib/random.h"
-#include "net/mac/contikimac/contikimac-for-aloha.h"
 #include "net/mac/mac-sequence.h"
 #include "net/netstack.h"
 #include "net/rime/rime.h"
@@ -191,7 +192,6 @@ static int we_are_receiving_burst = 0;
 #define ACK_LEN 3
 
 #include <stdio.h>
-static struct rtimer rt;
 static struct pt pt;
 
 static volatile uint8_t contikimac_is_on = 0;
@@ -222,6 +222,7 @@ static void on(void) {
   if (contikimac_is_on && radio_is_on == 0) {
     radio_is_on = 1;
     NETSTACK_RADIO.on();
+    printf("contikimac-aloha: radio on\n");
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -234,28 +235,11 @@ static void off(void) {
 /*---------------------------------------------------------------------------*/
 static volatile rtimer_clock_t cycle_start;
 /*---------------------------------------------------------------------------*/
-static void powercycle_turn_radio_off(void) {
-#if CONTIKIMAC_CONF_COMPOWER
-  uint8_t was_on = radio_is_on;
-#endif /* CONTIKIMAC_CONF_COMPOWER */
-
-  if (we_are_sending == 0 && we_are_receiving_burst == 0) {
-    off();
-#if CONTIKIMAC_CONF_COMPOWER
-    if (was_on && !radio_is_on) {
-      compower_accumulate(&compower_idle_activity);
-    }
-#endif /* CONTIKIMAC_CONF_COMPOWER */
-  }
-}
-/*---------------------------------------------------------------------------*/
 static void powercycle_turn_radio_on(void) {
   if (we_are_sending == 0 && we_are_receiving_burst == 0) {
     on();
   }
 }
-/*---------------------------------------------------------------------------*/
-static void advance_cycle_start(void) { cycle_start += CYCLE_TIME; }
 /*---------------------------------------------------------------------------*/
 static int broadcast_rate_drop(void) {
 #if CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT
@@ -358,10 +342,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     return MAC_TX_NOACK;
   }
 
-  /* Switch off the radio to ensure that we didn't start sending while
-     the radio was doing a channel check. */
-  off();
-
   got_strobe_ack = 0;
 
   /* Set contikimac_is_on to one to allow the on() and off() functions
@@ -370,12 +350,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   contikimac_was_on = contikimac_is_on;
   contikimac_is_on = 1;
 
-  if (!is_broadcast) {
-    /* Turn radio on to receive expected unicast ack.  Not necessary
-       with hardware ack detection, and may trigger an unnecessary cca
-       or rx cycle */
-    on();
-  }
   seqno = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
 
   watchdog_periodic();
@@ -411,8 +385,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       }
     }
   }
-
-  off();
 
   contikimac_is_on = contikimac_was_on;
   we_are_sending = 0;
@@ -512,10 +484,7 @@ static void qsend_list(mac_callback_t sent, void *ptr,
 /* Timer callback triggered when receiving a burst, after having
    waited for a next packet for a too long time. Turns the radio off
    and leaves burst reception mode */
-static void recv_burst_off(void *ptr) {
-  off();
-  we_are_receiving_burst = 0;
-}
+static void recv_burst_off(void *ptr) { we_are_receiving_burst = 0; }
 /*---------------------------------------------------------------------------*/
 static void input_packet(void) {
   static struct ctimer ct;
@@ -528,10 +497,6 @@ static void input_packet(void) {
   original_datalen = packetbuf_datalen();
   original_dataptr = packetbuf_dataptr();
 #endif
-
-  if (!we_are_receiving_burst) {
-    off();
-  }
 
   if (packetbuf_datalen() == ACK_LEN) {
     /* Ignore ack packets */
@@ -555,7 +520,6 @@ static void input_packet(void) {
            a next packet */
         ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
       } else {
-        off();
         ctimer_stop(&ct);
       }
 
@@ -578,14 +542,13 @@ static void init(void) {
   PT_INIT(&pt);
 
   contikimac_is_on = 1;
-  powercycle_turn_radio_on();
+  on();
 }
 /*---------------------------------------------------------------------------*/
 static int turn_on(void) {
   if (contikimac_is_on == 0) {
     contikimac_is_on = 1;
     contikimac_keep_radio_on = 0;
-    rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
   }
   return 1;
 }

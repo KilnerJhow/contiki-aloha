@@ -37,6 +37,8 @@
  *         Joakim Eriksson <joakime@sics.se>
  */
 
+#include "net/mac/contikimac/contikimac-for-aloha-rdc.h"
+
 #include <string.h>
 
 #include "contiki-conf.h"
@@ -44,7 +46,6 @@
 #include "dev/radio.h"
 #include "dev/watchdog.h"
 #include "lib/random.h"
-#include "net/mac/contikimac/contikimac-for-aloha.h"
 #include "net/mac/mac-sequence.h"
 #include "net/netstack.h"
 #include "net/rime/rime.h"
