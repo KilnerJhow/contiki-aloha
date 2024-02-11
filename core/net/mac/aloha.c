@@ -164,8 +164,10 @@ static void transmit_packet_list(void *ptr) {
  * @param n
  */
 static void schedule_transmission(struct neighbor_queue *n) {
-  clock_time_t delay = (random_rand() % 10) + 1;
-
+  // clock_time_t delay = ((random_rand() % 5) * 5) + 5;
+  clock_time_t delay = (random_rand()) % 20 + 1;
+  // 8 -> 60ms
+  // 3 ->
   ctimer_set(&n->transmit_timer, delay, transmit_packet_list, n);
 }
 /*---------------------------------------------------------------------------*/
@@ -208,16 +210,16 @@ static void tx_done(int status, struct rdc_buf_list *q,
 
   switch (status) {
     case MAC_TX_OK:
-      PRINTF("aloha: send_packet_again ok %d\n", n->transmissions);
+      // PRINTF("aloha: rexmit ok %d\n", n->transmissions);
+      // printf("aloha: tx_done ok %d\n", n->transmissions);
       break;
     case MAC_TX_COLLISION:
     case MAC_TX_NOACK:
-      PRINTF("aloha: drop with status %d after %d transmissions\n", status,
-             n->transmissions);
+      // PRINTF("aloha: drop with status %d after %d transmissions\n", status,
+      //        n->transmissions);
       break;
     default:
-      PRINTF("aloha: send_packet_again failed %d: %d\n", n->transmissions,
-             status);
+      // PRINTF("aloha: rexmit failed %d: %d\n", n->transmissions, status);
       break;
   }
 
@@ -286,13 +288,19 @@ static void packet_sent(void *ptr, int status, int num_transmissions) {
 
   switch (status) {
     case MAC_TX_OK:
+      // printf("aloha: tx_ok\n");
       tx_ok(q, n, num_transmissions);
       break;
     case MAC_TX_NOACK:
       PRINTF("aloha: noack received for packet %p\n", q);
+      // printf("aloha: noack received for packet %p\n", q);
       noack(q, n, num_transmissions);
       break;
     case MAC_TX_COLLISION:
+      // collision(q, n, num_transmissions);
+      // PRINTF("aloha: collision on %p\n", q);
+
+      break;
     case MAC_TX_DEFERRED:
       break;
     default:
@@ -418,6 +426,7 @@ static void init(void) {
   memb_init(&packet_memb);
   memb_init(&metadata_memb);
   memb_init(&neighbor_memb);
+  printf("aloha: clock seconds %lu\n", CLOCK_SECOND);
 }
 /*---------------------------------------------------------------------------*/
 const struct mac_driver aloha_driver = {

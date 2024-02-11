@@ -37,7 +37,7 @@
  *         Joakim Eriksson <joakime@sics.se>
  */
 
-#include "net/mac/contikimac/contikimac-for-aloha.h"
+#include "net/mac/contikimac/contikimac-for-aloha-radio-always-on.h"
 
 #include <string.h>
 
@@ -68,11 +68,7 @@
 #endif
 
 /* CYCLE_TIME for channel cca checks, in rtimer ticks. */
-#ifdef CONTIKIMAC_CONF_CYCLE_TIME
-#define CYCLE_TIME (CONTIKIMAC_CONF_CYCLE_TIME)
-#else
 #define CYCLE_TIME (RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE)
-#endif
 
 /* Are we currently receiving a burst? */
 static int we_are_receiving_burst = 0;
@@ -88,27 +84,17 @@ static int we_are_receiving_burst = 0;
 /* CCA_CHECK_TIME is the time it takes to perform a CCA check. */
 /* Note this may be zero. AVRs have 7612 ticks/sec, but block until cca is done
  */
-#ifdef CONTIKIMAC_CONF_CCA_CHECK_TIME
-#define CCA_CHECK_TIME (CONTIKIMAC_CONF_CCA_CHECK_TIME)
-#else
-#define CCA_CHECK_TIME RTIMER_ARCH_SECOND / 8192
-#endif
 
-/* CCA_SLEEP_TIME is the time between two successive CCA checks. */
-/* Add 1 when rtimer ticks are coarse */
-#ifdef CONTIKIMAC_CONF_CCA_SLEEP_TIME
-#define CCA_SLEEP_TIME CONTIKIMAC_CONF_CCA_SLEEP_TIME
-#else
-#if RTIMER_ARCH_SECOND > 8000
-#define CCA_SLEEP_TIME RTIMER_ARCH_SECOND / 2000
-#else
-#define CCA_SLEEP_TIME (RTIMER_ARCH_SECOND / 2000) + 1
-#endif /* RTIMER_ARCH_SECOND > 8000 */
-#endif /* CONTIKIMAC_CONF_CCA_SLEEP_TIME */
+// #define CCA_CHECK_TIME RTIMER_ARCH_SECOND / 8192
+#define CCA_CHECK_TIME 4
+
+// #define CCA_SLEEP_TIME RTIMER_ARCH_SECOND / 2000
+#define CCA_SLEEP_TIME 6
 
 /* CHECK_TIME is the total time it takes to perform CCA_COUNT_MAX
    CCAs. */
 #define CHECK_TIME (CCA_COUNT_MAX * (CCA_CHECK_TIME + CCA_SLEEP_TIME))
+// #define CHECK_TIME 1
 
 /* LISTEN_TIME_AFTER_PACKET_DETECTED is the time that we keep checking
    for activity after a potential packet has been detected by a CCA
@@ -168,6 +154,9 @@ static int we_are_receiving_burst = 0;
 #define CCA_COUNT_MAX 2
 #endif
 
+// #define CCA_ACTIVE_TIME 90
+#define CCA_ACTIVE_TIME 150
+
 /* Before starting a transmission, Contikimac checks the availability
    of the channel with CCA_COUNT_MAX_TX consecutive CCAs */
 #ifdef CONTIKIMAC_CONF_CCA_COUNT_MAX_TX
@@ -203,7 +192,6 @@ static int we_are_receiving_burst = 0;
 #define ACK_LEN 3
 
 #include <stdio.h>
-static struct rtimer rt;
 static struct pt pt;
 
 static volatile uint8_t contikimac_is_on = 0;
@@ -222,10 +210,6 @@ static volatile unsigned char radio_is_on = 0;
 #define PRINTDEBUG(...)
 #endif
 
-#if CONTIKIMAC_CONF_COMPOWER
-static struct compower_activity current_packet;
-#endif /* CONTIKIMAC_CONF_COMPOWER */
-
 #define DEFAULT_STREAM_TIME (4 * CYCLE_TIME)
 
 #if CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT
@@ -238,6 +222,7 @@ static void on(void) {
   if (contikimac_is_on && radio_is_on == 0) {
     radio_is_on = 1;
     NETSTACK_RADIO.on();
+    printf("contikimac-aloha: radio on\n");
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -248,194 +233,12 @@ static void off(void) {
   }
 }
 /*---------------------------------------------------------------------------*/
-static void powercycle_wrapper(struct rtimer *t, void *ptr);
-static char powercycle(struct rtimer *t, void *ptr);
-/*---------------------------------------------------------------------------*/
 static volatile rtimer_clock_t cycle_start;
-#if SYNC_CYCLE_STARTS
-static volatile rtimer_clock_t sync_cycle_start;
-static volatile uint8_t sync_cycle_phase;
-#endif
-/*---------------------------------------------------------------------------*/
-static void schedule_powercycle(struct rtimer *t, rtimer_clock_t time) {
-  int r;
-  rtimer_clock_t now;
-
-  if (contikimac_is_on) {
-    time += RTIMER_TIME(t);
-    now = RTIMER_NOW();
-    if (RTIMER_CLOCK_LT(time, now + RTIMER_GUARD_TIME)) {
-      time = now + RTIMER_GUARD_TIME;
-    }
-
-    r = rtimer_set(t, time, 1, powercycle_wrapper, NULL);
-
-    if (r != RTIMER_OK) {
-      PRINTF("schedule_powercycle: could not set rtimer\n");
-    }
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void schedule_powercycle_fixed(struct rtimer *t,
-                                      rtimer_clock_t fixed_time) {
-  int r;
-  rtimer_clock_t now;
-
-  if (contikimac_is_on) {
-    now = RTIMER_NOW();
-    if (RTIMER_CLOCK_LT(fixed_time, now + RTIMER_GUARD_TIME)) {
-      fixed_time = now + RTIMER_GUARD_TIME;
-    }
-
-    r = rtimer_set(t, fixed_time, 1, powercycle_wrapper, NULL);
-    if (r != RTIMER_OK) {
-      PRINTF("schedule_powercycle: could not set rtimer\n");
-    }
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void powercycle_turn_radio_off(void) {
-#if CONTIKIMAC_CONF_COMPOWER
-  uint8_t was_on = radio_is_on;
-#endif /* CONTIKIMAC_CONF_COMPOWER */
-
-  if (we_are_sending == 0 && we_are_receiving_burst == 0) {
-    // off();
-#if CONTIKIMAC_CONF_COMPOWER
-    if (was_on && !radio_is_on) {
-      compower_accumulate(&compower_idle_activity);
-    }
-#endif /* CONTIKIMAC_CONF_COMPOWER */
-  }
-}
 /*---------------------------------------------------------------------------*/
 static void powercycle_turn_radio_on(void) {
   if (we_are_sending == 0 && we_are_receiving_burst == 0) {
     on();
   }
-}
-/*---------------------------------------------------------------------------*/
-static void powercycle_wrapper(struct rtimer *t, void *ptr) {
-  powercycle(t, ptr);
-}
-/*---------------------------------------------------------------------------*/
-static void advance_cycle_start(void) { cycle_start += CYCLE_TIME; }
-/*---------------------------------------------------------------------------*/
-static char powercycle(struct rtimer *t, void *ptr) {
-  PT_BEGIN(&pt);
-
-  cycle_start = RTIMER_NOW();
-
-  while (1) {
-    powercycle_turn_radio_on();
-    static uint8_t packet_seen;
-    static uint8_t count;
-
-    packet_seen = 0;
-
-    for (count = 0; count < CCA_COUNT_MAX; ++count) {
-      if (we_are_sending == 0 && we_are_receiving_burst == 0) {
-        // powercycle_turn_radio_on();
-        /* Check if a packet is seen in the air. If so, we keep the
-             radio on for a while (LISTEN_TIME_AFTER_PACKET_DETECTED) to
-             be able to receive the packet. We also continuously check
-             the radio medium to make sure that we wasn't woken up by a
-             false positive: a spurious radio interference that was not
-             caused by an incoming packet. */
-        if (NETSTACK_RADIO.channel_clear() == 0) {
-          // printf("packet seen\n");
-          packet_seen = 1;
-          break;
-        }
-        // powercycle_turn_radio_off();
-      }
-      schedule_powercycle_fixed(t, RTIMER_NOW() + CCA_SLEEP_TIME);
-      PT_YIELD(&pt);
-    }
-    // powercycle_turn_radio_off();
-
-    if (packet_seen) {
-      // printf("packet seen\n");
-
-      static rtimer_clock_t start;
-      static uint8_t silence_periods, periods;
-      start = RTIMER_NOW();
-
-      periods = silence_periods = 0;
-      while (we_are_sending == 0 && radio_is_on &&
-             RTIMER_CLOCK_LT(RTIMER_NOW(),
-                             (start + LISTEN_TIME_AFTER_PACKET_DETECTED))) {
-        /* Check for a number of consecutive periods of
-             non-activity. If we see two such periods, we turn the
-             radio off. Also, if a packet has been successfully
-             received (as indicated by the
-             NETSTACK_RADIO.pending_packet() function), we stop
-             snooping. */
-        /* A cca cycle will disrupt rx on some radios, e.g. mc1322x, rf230 */
-        if (NETSTACK_RADIO.channel_clear()) {
-          ++silence_periods;
-        } else {
-          silence_periods = 0;
-        }
-
-        ++periods;
-
-        if (NETSTACK_RADIO.receiving_packet()) {
-          silence_periods = 0;
-        }
-        if (silence_periods > MAX_SILENCE_PERIODS) {
-          // powercycle_turn_radio_off();
-          // printf("silence_periods > MAX_SILENCE_PERIODS\n");
-          break;
-        }
-        if (WITH_FAST_SLEEP && periods > MAX_NONACTIVITY_PERIODS &&
-            !(NETSTACK_RADIO.receiving_packet() ||
-              NETSTACK_RADIO.pending_packet())) {
-          // powercycle_turn_radio_off();
-          break;
-        }
-        if (NETSTACK_RADIO.pending_packet()) {
-          break;
-        }
-
-        schedule_powercycle(t, CCA_CHECK_TIME + CCA_SLEEP_TIME);
-        PT_YIELD(&pt);
-      }
-      if (radio_is_on) {
-        if (!(NETSTACK_RADIO.receiving_packet() ||
-              NETSTACK_RADIO.pending_packet()) ||
-            !RTIMER_CLOCK_LT(RTIMER_NOW(),
-                             (start + LISTEN_TIME_AFTER_PACKET_DETECTED))) {
-          // powercycle_turn_radio_off();
-        }
-      }
-    }
-
-    advance_cycle_start();
-
-    if (RTIMER_CLOCK_LT(RTIMER_NOW(), cycle_start)) {
-      /* Schedule the next powercycle interrupt, or sleep the mcu
-      until then.  Sleeping will not exit from this interrupt, so
-      ensure an occasional wake cycle or foreground processing will
-      be blocked until a packet is detected */
-#if RDC_CONF_MCU_SLEEP
-
-      static uint8_t sleepcycle;
-      if ((sleepcycle++ < 16) && !we_are_sending && !radio_is_on) {
-        rtimer_arch_sleep(RTIMER_NOW() - cycle_start);
-      } else {
-        sleepcycle = 0;
-        schedule_powercycle_fixed(t, cycle_start);
-        PT_YIELD(&pt);
-      }
-#else
-      schedule_powercycle_fixed(t, cycle_start);
-      PT_YIELD(&pt);
-#endif
-    }
-  }
-
-  PT_END(&pt);
 }
 /*---------------------------------------------------------------------------*/
 static int broadcast_rate_drop(void) {
@@ -536,12 +339,8 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     we_are_sending = 0;
     PRINTF("contikimac-aloha: collision receiving %d, pending %d\n",
            NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
-    return MAC_TX_COLLISION;
+    return MAC_TX_NOACK;
   }
-
-  /* Switch off the radio to ensure that we didn't start sending while
-     the radio was doing a channel check. */
-  off();
 
   got_strobe_ack = 0;
 
@@ -551,21 +350,12 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   contikimac_was_on = contikimac_is_on;
   contikimac_is_on = 1;
 
-  if (!is_broadcast) {
-    /* Turn radio on to receive expected unicast ack.  Not necessary
-       with hardware ack detection, and may trigger an unnecessary cca
-       or rx cycle */
-    on();
-  }
   seqno = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
 
   watchdog_periodic();
   if (is_broadcast) {
     t0 = RTIMER_NOW();
-    // printf("send broadcast\n");
-    for (strobes = 0; /* strobes == 1; */
-         got_strobe_ack == 0 && RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME);
-         strobes++) {
+    while (RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME)) {
       watchdog_periodic();
 
       rtimer_clock_t wt;
@@ -596,8 +386,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     }
   }
 
-  // off();
-
   contikimac_is_on = contikimac_was_on;
   we_are_sending = 0;
 
@@ -609,7 +397,6 @@ static int send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   } else {
     ret = MAC_TX_OK;
   }
-  // printf("send packet ret %d\n", ret);
   return ret;
 }
 /*---------------------------------------------------------------------------*/
@@ -697,10 +484,7 @@ static void qsend_list(mac_callback_t sent, void *ptr,
 /* Timer callback triggered when receiving a burst, after having
    waited for a next packet for a too long time. Turns the radio off
    and leaves burst reception mode */
-static void recv_burst_off(void *ptr) {
-  // off();
-  we_are_receiving_burst = 0;
-}
+static void recv_burst_off(void *ptr) { we_are_receiving_burst = 0; }
 /*---------------------------------------------------------------------------*/
 static void input_packet(void) {
   static struct ctimer ct;
@@ -714,18 +498,11 @@ static void input_packet(void) {
   original_dataptr = packetbuf_dataptr();
 #endif
 
-  if (!we_are_receiving_burst) {
-    // off();
-  }
-
   if (packetbuf_datalen() == ACK_LEN) {
     /* Ignore ack packets */
     PRINTF("contikimac-aloha: ignored ack\n");
     return;
   }
-
-  /*  printf("cycle_start 0x%02x 0x%02x\n", cycle_start, cycle_start %
-   * CYCLE_TIME);*/
 
   if (packetbuf_totlen() > 0 && NETSTACK_FRAMER.parse() >= 0) {
     if (packetbuf_datalen() > 0 && packetbuf_totlen() > 0 &&
@@ -743,7 +520,6 @@ static void input_packet(void) {
            a next packet */
         ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
       } else {
-        // off();
         ctimer_stop(&ct);
       }
 
@@ -758,7 +534,6 @@ static void input_packet(void) {
     }
   } else {
     PRINTF("contikimac-aloha: failed to parse (%u)\n", packetbuf_totlen());
-    // printf("contikimac-aloha: failed to parse (%u)\n", packetbuf_totlen());
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -766,17 +541,14 @@ static void init(void) {
   radio_is_on = 0;
   PT_INIT(&pt);
 
-  // rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-
   contikimac_is_on = 1;
-  powercycle_turn_radio_on();
+  on();
 }
 /*---------------------------------------------------------------------------*/
 static int turn_on(void) {
   if (contikimac_is_on == 0) {
     contikimac_is_on = 1;
     contikimac_keep_radio_on = 0;
-    // rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
   }
   return 1;
 }
@@ -797,7 +569,7 @@ static unsigned short duty_cycle(void) {
   return (1ul * CLOCK_SECOND * CYCLE_TIME) / RTIMER_ARCH_SECOND;
 }
 /*---------------------------------------------------------------------------*/
-const struct rdc_driver contikimac_aloha_driver = {
+const struct rdc_driver contikimac_aloha_driver_radio_always_on = {
     "ContikiAlohaMac", init,    qsend_packet, qsend_list,
     input_packet,      turn_on, turn_off,     duty_cycle,
 };

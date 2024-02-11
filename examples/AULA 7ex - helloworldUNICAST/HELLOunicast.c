@@ -1,11 +1,12 @@
+#include <stdio.h>
+
 #include "contiki.h"
 #include "net/rime/rime.h"
-#include <stdio.h>
 
 // SENSORES
 #include "dev/sht11/sht11-sensor.h"
 
-#define DESTINO 3
+#define DESTINO 1
 
 /*---------------------------------------------------------------------------*/
 PROCESS(example_unicast_process, "Example unicast");
@@ -25,7 +26,6 @@ PROCESS_THREAD(example_unicast_process, ev, data) {
   PROCESS_BEGIN();
 
   unicast_open(&uc, 146, &unicast_callbacks);
-
   while (1) {
     static struct etimer et;
     linkaddr_t addr;
@@ -34,7 +34,7 @@ PROCESS_THREAD(example_unicast_process, ev, data) {
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-    packetbuf_copyfrom("Hello", 5);
+    packetbuf_copyfrom("Hello 123", 5);
     addr.u8[0] = DESTINO;
     addr.u8[1] = 0;
     if (!linkaddr_cmp(&addr, &linkaddr_node_addr)) {

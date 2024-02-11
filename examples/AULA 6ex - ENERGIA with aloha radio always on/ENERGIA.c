@@ -22,7 +22,7 @@
 // VARIAVEIS DO TMOTE SKY
 #define _Nb 90  // tamanho do pacote
 static uint32_t _Eihop, _P0;
-static uint8_t _Dist = 245;
+static uint8_t _Dist = 135;
 static uint8_t _R = 250;  // TMOTE SKY
 
 // VARIAVEIS DO TMOTE SKY (mA)
@@ -85,34 +85,21 @@ PROCESS(example_collect_process, "Test collect process");
 AUTOSTART_PROCESSES(&example_collect_process);
 /*---------------------------------------------------------------------------*/
 static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
-  if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_null)) {
-    // Este pacote é um broadcast
-    // printf("Broadcast from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-    //        originator->u8[0], originator->u8[1], seqno, hops,
-    //        packetbuf_datalen(), (char *)packetbuf_dataptr());
-    return;
+  if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
+    uint8_t d = _Dist / hops;
+
+    /* Eihop: Consumo Energetico Por i saltos
+       P0: potência de transmissão
+       i: numero de saltos de uma transmissão
+       d: distância entre os nós
+       R: taxa de Transmissão
+       Nb: tamanho do Pacote
+    */
+    // Eihop,P0, i,d,R,Nb
+    // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
+    //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+    printf("%s,%d,%u,%u,%u\n", (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
   }
-
-  printf("Data packet from %d.%d, seqno %d, hops %d: len %d '%s'\n",
-         originator->u8[0], originator->u8[1], seqno, hops, packetbuf_datalen(),
-         (char *)packetbuf_dataptr());
-
-  // if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
-  //   uint8_t d = _Dist / hops;
-
-  //   /* Eihop: Consumo Energetico Por i saltos
-  //      P0: potência de transmissão
-  //      i: numero de saltos de uma transmissão
-  //      d: distância entre os nós
-  //      R: taxa de Transmissão
-  //      Nb: tamanho do Pacote
-  //   */
-  //   // Eihop,P0, i,d,R,Nb
-  //   // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
-  //   //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
-  //   printf("%s,%d,%u,%u,%u \n", (char *)packetbuf_dataptr(), hops, d, _R,
-  //   _Nb);
-  // }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -142,7 +129,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
   }
 
   // Aguarde algum tempo para que a rede se estabilize.
-  etimer_set(&et, 120 * CLOCK_SECOND);
+  etimer_set(&et, 30 * CLOCK_SECOND);
   PROCESS_WAIT_UNTIL(etimer_expired(&et));
   printf("Starting to sense\n");
 
@@ -159,13 +146,9 @@ PROCESS_THREAD(example_collect_process, ev, data) {
       static linkaddr_t oldparent;
       const linkaddr_t *parent;
 
-      // printf("Sending\n");
-      // packetbuf_set_datalen(_Nb);
+      packetbuf_set_datalen(_Nb);
       packetbuf_clear();
-      // printf("Sending %s\n", packet);
       packetbuf_set_datalen(sprintf(packetbuf_dataptr(), "%s", packet) + 1);
-      // printf("Sending %s\n", (char *)packetbuf_dataptr());
-      // printf("Length %d\n", packetbuf_datalen());
 
       energest_flush();
       collect_send(&tc, 15);
@@ -184,9 +167,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
     }
 
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
-    // printf("Periodic\n");
   }
-  // free(packet);
 
   printf("Process end\n");
   PROCESS_END();

@@ -1,6 +1,7 @@
+#include <stdio.h>
+
 #include "contiki.h"
 #include "net/rime/rime.h"
-#include <stdio.h>
 
 // SENSORES
 #include "dev/sht11/sht11-sensor.h"
@@ -34,7 +35,10 @@ PROCESS_THREAD(hello_unicast, ev, data) {
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     // printf("%d envia 'Hello' para %d\n", linkaddr_node_addr.u8[0], DESTINO);
-    packetbuf_copyfrom("Hello", 5);
+    // Hello - 1538us
+    packetbuf_copyfrom("Hello abcdefghjklmnopqrstuvxyz", 31);
+    // printf("CLOCK_SECOND = %lu\n", CLOCK_SECOND);
+    // printf("Sending %s\n", (char *)packetbuf_dataptr());
     addr.u8[0] = DESTINO;
     addr.u8[1] = 0;
     if (!linkaddr_cmp(&addr, &linkaddr_node_addr)) {

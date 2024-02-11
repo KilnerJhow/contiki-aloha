@@ -5,5 +5,17 @@
     "${workspaceFolder}/**",
   ],
   "C_Cpp.clang_format_fallbackStyle": "Google",
-  "C_Cpp.vcFormat.indent.caseContents": true
+  "C_Cpp.vcFormat.indent.caseContents": true,
+  "files.associations": {
+    "*.tcc": "c",
+    "limits": "c",
+    "numeric": "c",
+    "ranges": "c",
+    "streambuf": "c",
+    "tuple": "c",
+    "type_traits": "c",
+    "utility": "c",
+    "clock.h": "c",
+    "ostream": "c"
+  }
 }

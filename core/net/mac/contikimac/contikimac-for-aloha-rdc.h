@@ -44,6 +44,6 @@
 #include "net/mac/rdc.h"
 #include "sys/rtimer.h"
 
-extern const struct rdc_driver contikimac_aloha_driver;
+extern const struct rdc_driver contikimac_aloha_driver_rdc;
 
 #endif /* CONTIKIMAC_H */
