@@ -85,11 +85,9 @@ static int we_are_receiving_burst = 0;
 /* Note this may be zero. AVRs have 7612 ticks/sec, but block until cca is done
  */
 
-// #define CCA_CHECK_TIME RTIMER_ARCH_SECOND / 8192
-#define CCA_CHECK_TIME 4
+#define CCA_CHECK_TIME RTIMER_ARCH_SECOND / 8192
 
-// #define CCA_SLEEP_TIME RTIMER_ARCH_SECOND / 2000
-#define CCA_SLEEP_TIME 6
+#define CCA_SLEEP_TIME RTIMER_ARCH_SECOND / 2000
 
 /* CHECK_TIME is the total time it takes to perform CCA_COUNT_MAX
    CCAs. */
@@ -155,15 +153,20 @@ static int we_are_receiving_burst = 0;
 #endif
 
 // #define CCA_ACTIVE_TIME 90
-#define CCA_ACTIVE_TIME 500
+#define FIVE_PERCENT_DUTY_CYCLE 216
+#define TEN_PERCENT_DUTY_CYCLE 455
+#define TWENTY_PERCENT_DUTY_CYCLE 1024
+#define THIRTY_PERCENT_DUTY_CYCLE 1755
+#define FORTY_PERCENT_DUTY_CYCLE 2731
+#define FIFTY_PERCENT_DUTY_CYCLE 4096
+#define SIXTY_PERCENT_DUTY_CYCLE 6144
+#define SEVENTY_PERCENT_DUTY_CYCLE 9557
+#define EIGHTY_PERCENT_DUTY_CYCLE 16384
+#define NINETY_PERCENT_DUTY_CYCLE 36864
 
-/* Before starting a transmission, Contikimac checks the availability
-   of the channel with CCA_COUNT_MAX_TX consecutive CCAs */
-#ifdef CONTIKIMAC_CONF_CCA_COUNT_MAX_TX
-#define CCA_COUNT_MAX_TX (CONTIKIMAC_CONF_CCA_COUNT_MAX_TX)
-#else
-#define CCA_COUNT_MAX_TX 6
-#endif
+#define CCA_ACTIVE_TIME SIXTY_PERCENT_DUTY_CYCLE
+
+#define RADIO_ALWAYS_ON 0
 
 /* AFTER_ACK_DETECTED_WAIT_TIME is the time to wait after a potential
    ACK packet has been detected until we can read it out from the
@@ -221,6 +224,7 @@ static int broadcast_rate_counter;
 /*---------------------------------------------------------------------------*/
 static void on(void) {
   if (contikimac_is_on && radio_is_on == 0) {
+    printf("on\n");
     radio_is_on = 1;
     NETSTACK_RADIO.on();
   }
@@ -300,7 +304,9 @@ static void powercycle_wrapper(struct rtimer *t, void *ptr) {
   powercycle(t, ptr);
 }
 /*---------------------------------------------------------------------------*/
-static void advance_cycle_start(void) { cycle_start += CYCLE_TIME; }
+static void advance_cycle_start(void) {
+  cycle_start = cycle_start + CYCLE_TIME + CCA_ACTIVE_TIME;
+}
 /*---------------------------------------------------------------------------*/
 static char powercycle(struct rtimer *t, void *ptr) {
   PT_BEGIN(&pt);
@@ -309,36 +315,29 @@ static char powercycle(struct rtimer *t, void *ptr) {
 
   while (1) {
     static uint8_t packet_seen;
-    static uint8_t count;
     static rtimer_clock_t start;
 
     packet_seen = 0;
-    for (count = 0; count < CCA_COUNT_MAX; ++count) {
-      if (we_are_sending == 0 && we_are_receiving_burst == 0) {
-        powercycle_turn_radio_on();
-        /* Check if a packet is seen in the air. If so, we keep the
-             radio on for a while (LISTEN_TIME_AFTER_PACKET_DETECTED) to
-             be able to receive the packet. We also continuously check
-             the radio medium to make sure that we wasn't woken up by a
-             false positive: a spurious radio interference that was not
-             caused by an incoming packet. */
-        start = RTIMER_NOW();
-        while (RTIMER_CLOCK_LT(RTIMER_NOW(), (start + CCA_ACTIVE_TIME))) {
-          if (NETSTACK_RADIO.channel_clear() == 0) {
-            packet_seen = 1;
-            powercycle_turn_radio_on();
-            break;
-          }
-        }
 
-        if (packet_seen) {
+    if (we_are_sending == 0 && we_are_receiving_burst == 0) {
+      powercycle_turn_radio_on();
+      /* Check if a packet is seen in the air. If so, we keep the
+           radio on for a while (LISTEN_TIME_AFTER_PACKET_DETECTED) to
+           be able to receive the packet. We also continuously check
+           the radio medium to make sure that we wasn't woken up by a
+           false positive: a spurious radio interference that was not
+           caused by an incoming packet. */
+      start = RTIMER_NOW();
+      while (RTIMER_CLOCK_LT(RTIMER_NOW(), (start + CCA_ACTIVE_TIME))) {
+        if (NETSTACK_RADIO.channel_clear() == 0) {
+          packet_seen = 1;
           break;
         }
-
-        powercycle_turn_radio_off();
       }
-      schedule_powercycle_fixed(t, RTIMER_NOW() + CCA_SLEEP_TIME);
-      PT_YIELD(&pt);
+    }
+
+    if (!packet_seen) {
+      powercycle_turn_radio_off();
     }
 
     if (packet_seen) {
@@ -398,7 +397,7 @@ static char powercycle(struct rtimer *t, void *ptr) {
 
     advance_cycle_start();
 
-    if (RTIMER_CLOCK_LT(RTIMER_NOW(), cycle_start - CHECK_TIME * 4)) {
+    if (RTIMER_CLOCK_LT(RTIMER_NOW(), cycle_start)) {
       /* Schedule the next powercycle interrupt, or sleep the mcu
       until then.  Sleeping will not exit from this interrupt, so
       ensure an occasional wake cycle or foreground processing will
@@ -730,10 +729,17 @@ static void input_packet(void) {
 static void init(void) {
   radio_is_on = 0;
   PT_INIT(&pt);
+  contikimac_is_on = 1;
 
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+
   printf("CCA_ACTIVE_TIME: %d\n", CCA_ACTIVE_TIME);
-  contikimac_is_on = 1;
+  printf("RTIMER_ARCH_SECOND: %u\n", RTIMER_ARCH_SECOND);
+  printf("CLOCK_SECOND: %lu\n", CLOCK_SECOND);
+  printf("CYCLE_TIME: %u\n", CYCLE_TIME);
+  printf("CCA_CHECK_TIME: %u\n", CCA_CHECK_TIME);
+  printf("CCA_SLEEP_TIME: %u\n", CCA_SLEEP_TIME);
+  printf("CHECK_TIME: %u\n", CHECK_TIME);
 }
 /*---------------------------------------------------------------------------*/
 static int turn_on(void) {

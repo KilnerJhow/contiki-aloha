@@ -164,10 +164,10 @@ static void transmit_packet_list(void *ptr) {
  * @param n
  */
 static void schedule_transmission(struct neighbor_queue *n) {
-  clock_time_t delay = ((random_rand() % 5) * 5) + 5;
+  // clock_time_t delay = ((random_rand() % 5) * 5) + 5;
+  clock_time_t delay = (random_rand()) % 20 + 1;
   // 8 -> 60ms
   // 3 ->
-  // printf("aloha: schedule_transmission %u\n", delay);
   ctimer_set(&n->transmit_timer, delay, transmit_packet_list, n);
 }
 /*---------------------------------------------------------------------------*/
@@ -426,6 +426,7 @@ static void init(void) {
   memb_init(&packet_memb);
   memb_init(&metadata_memb);
   memb_init(&neighbor_memb);
+  printf("aloha: clock seconds %lu\n", CLOCK_SECOND);
 }
 /*---------------------------------------------------------------------------*/
 const struct mac_driver aloha_driver = {
