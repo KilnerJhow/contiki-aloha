@@ -8,7 +8,7 @@
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
     <title>aloha-rdc</title>
-    <randomseed>123456</randomseed>
+    <randomseed>123485</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
@@ -117,7 +117,7 @@
       <viewport>0.9090909090909091 0.0 0.0 0.9090909090909091 153.0909090909091 173.0</viewport>
     </plugin_config>
     <width>400</width>
-    <z>4</z>
+    <z>5</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -143,8 +143,7 @@
       <mote>2</mote>
       <showRadioRXTX />
       <showRadioHW />
-      <showLEDs />
-      <zoomfactor>500.0</zoomfactor>
+      <zoomfactor>200.0</zoomfactor>
     </plugin_config>
     <width>1708</width>
     <z>2</z>
@@ -159,10 +158,31 @@
       <decorations>true</decorations>
     </plugin_config>
     <width>1028</width>
-    <z>1</z>
+    <z>6</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.MoteInterfaceViewer
+    <mote_arg>0</mote_arg>
+    <plugin_config>
+      <interface>Serial port</interface>
+      <scrollpos>0,0</scrollpos>
+    </plugin_config>
+    <width>440</width>
+    <z>1</z>
+    <height>408</height>
+    <location_x>1266</location_x>
+    <location_y>401</location_y>
+  </plugin>
+  <plugin>
+    PowerTracker
+    <width>400</width>
+    <z>4</z>
+    <height>400</height>
+    <location_x>458</location_x>
+    <location_y>400</location_y>
   </plugin>
 </simconf>
 
