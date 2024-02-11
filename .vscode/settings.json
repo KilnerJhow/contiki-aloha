@@ -16,6 +16,7 @@
     "type_traits": "c",
     "utility": "c",
     "clock.h": "c",
-    "ostream": "c"
+    "ostream": "c",
+    "powertrace.h": "c"
   }
 }

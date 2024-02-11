@@ -165,10 +165,10 @@ static void transmit_packet_list(void *ptr) {
  */
 static void schedule_transmission(struct neighbor_queue *n) {
   // clock_time_t delay = ((random_rand() % 5) * 5) + 5;
-  clock_time_t delay = (random_rand()) % 20 + 1;
+  clock_time_t backoff = (random_rand()) % 20 + 1;
   // 8 -> 60ms
   // 3 ->
-  ctimer_set(&n->transmit_timer, delay, transmit_packet_list, n);
+  ctimer_set(&n->transmit_timer, backoff, transmit_packet_list, n);
 }
 /*---------------------------------------------------------------------------*/
 static void free_packet(struct neighbor_queue *n, struct rdc_buf_list *p,

@@ -153,6 +153,9 @@ static int we_are_receiving_burst = 0;
 #endif
 
 // #define CCA_ACTIVE_TIME 90
+#define ONE_PERCENT_DUTY_CYCLE 41
+#define THREE_PERCENT_DUTY_CYCLE 127
+#define FOUR_PERCENT_DUTY_CYCLE 171
 #define FIVE_PERCENT_DUTY_CYCLE 216
 #define TEN_PERCENT_DUTY_CYCLE 455
 #define TWENTY_PERCENT_DUTY_CYCLE 1024
@@ -164,7 +167,7 @@ static int we_are_receiving_burst = 0;
 #define EIGHTY_PERCENT_DUTY_CYCLE 16384
 #define NINETY_PERCENT_DUTY_CYCLE 36864
 
-#define CCA_ACTIVE_TIME SIXTY_PERCENT_DUTY_CYCLE
+#define CCA_ACTIVE_TIME THREE_PERCENT_DUTY_CYCLE
 
 #define RADIO_ALWAYS_ON 0
 
@@ -224,7 +227,6 @@ static int broadcast_rate_counter;
 /*---------------------------------------------------------------------------*/
 static void on(void) {
   if (contikimac_is_on && radio_is_on == 0) {
-    printf("on\n");
     radio_is_on = 1;
     NETSTACK_RADIO.on();
   }
