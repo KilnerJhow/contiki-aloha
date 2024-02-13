@@ -46,4 +46,4 @@
 
 extern const struct rdc_driver contikimac_aloha_driver_rdc;
 
-#endif /* CONTIKIMAC_H */
+#endif /* CONTIKIMAC_ALOHA_H */
