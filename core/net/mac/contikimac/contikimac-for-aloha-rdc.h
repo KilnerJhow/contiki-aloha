@@ -37,8 +37,8 @@
  *         Adam Dunkels <adam@sics.se>
  */
 
-#ifndef CONTIKIMAC_H
-#define CONTIKIMAC_H
+#ifndef CONTIKIMAC_ALOHA_H
+#define CONTIKIMAC_ALOHA_H
 
 #include "dev/radio.h"
 #include "net/mac/rdc.h"
