@@ -101,7 +101,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>0</z>
+    <z>1</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -117,7 +117,7 @@
       <viewport>0.9090909090909091 0.0 0.0 0.9090909090909091 153.0909090909091 173.0</viewport>
     </plugin_config>
     <width>400</width>
-    <z>5</z>
+    <z>3</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -128,9 +128,10 @@
       <filter />
       <formatted_time />
       <coloring />
+      <append>[CONTIKI_DIR]/loglistener_append.txt</append>
     </plugin_config>
     <width>1308</width>
-    <z>3</z>
+    <z>2</z>
     <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
@@ -146,7 +147,7 @@
       <zoomfactor>200.0</zoomfactor>
     </plugin_config>
     <width>1708</width>
-    <z>2</z>
+    <z>5</z>
     <height>166</height>
     <location_x>0</location_x>
     <location_y>810</location_y>
@@ -158,7 +159,7 @@
       <decorations>true</decorations>
     </plugin_config>
     <width>1028</width>
-    <z>6</z>
+    <z>7</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>
@@ -171,7 +172,7 @@
       <scrollpos>0,0</scrollpos>
     </plugin_config>
     <width>440</width>
-    <z>1</z>
+    <z>4</z>
     <height>408</height>
     <location_x>1266</location_x>
     <location_y>401</location_y>
@@ -179,10 +180,18 @@
   <plugin>
     PowerTracker
     <width>400</width>
-    <z>4</z>
+    <z>6</z>
     <height>400</height>
     <location_x>458</location_x>
     <location_y>400</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.SimControl
+    <width>280</width>
+    <z>0</z>
+    <height>160</height>
+    <location_x>400</location_x>
+    <location_y>0</location_y>
   </plugin>
 </simconf>
 
