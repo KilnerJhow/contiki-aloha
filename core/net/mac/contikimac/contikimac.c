@@ -1010,10 +1010,6 @@ static void init(void) {
   radio_is_on = 0;
   PT_INIT(&pt);
 
-  printf("CCA_CHECK_TIME %u\n", CCA_CHECK_TIME);
-  printf("CCA_SLEEP_TIME %u\n", CCA_SLEEP_TIME);
-  printf("CHECK_TIME %u\n", CHECK_TIME);
-
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
 
   contikimac_is_on = 1;

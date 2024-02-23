@@ -7,8 +7,8 @@
   <project EXPORT="discard">[APPS_DIR]/collect-view</project>
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
-    <title>aloha-rdc</title>
-    <randomseed>123485</randomseed>
+    <title>aloha-rdc-11</title>
+    <randomseed>919233</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
@@ -101,7 +101,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>1</z>
+    <z>2</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -131,7 +131,7 @@
       <append>[CONTIKI_DIR]/loglistener_append.txt</append>
     </plugin_config>
     <width>1308</width>
-    <z>2</z>
+    <z>0</z>
     <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
@@ -188,7 +188,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>0</z>
+    <z>1</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>

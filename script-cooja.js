@@ -9,7 +9,7 @@ runId = "1-";
 fileId = "5-duty-cycle";
 
 // In milliseconds.
-TIMEOUT(100000);
+TIMEOUT(14400000);
 
 while (true) {
   //Has the output file been created.

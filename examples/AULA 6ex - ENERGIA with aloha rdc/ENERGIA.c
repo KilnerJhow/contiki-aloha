@@ -71,9 +71,9 @@ void powertrace_print(char *str) {
   power = current * voltage;
   energy = charge * voltage;
 
-  // printf("power: %u.%02u mW\n",(uint16_t)power/1000,(uint16_t)power%1000);
-  // printf("consumption: %u.%02u
-  // mJ\n\n",(uint16_t)energy/1000,(uint16_t)energy%1000);
+  // printf("power: %u.%02u mW\n", (uint16_t)power / 1000, (uint16_t)power %
+  // 1000); printf("consumption: %u.%02u mJ\n\n", (uint16_t)energy / 1000,
+  //        (uint16_t)energy % 1000);
 
   _Eihop = energy;
   _P0 = power;
