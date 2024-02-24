@@ -5,11 +5,11 @@ importPackage(java.io);
 WAIT_UNTIL(id == 1 && msg.contains("Starting to sense"));
 
 outputs = new Object();
-runId = "1-";
-fileId = "5-duty-cycle";
+runId = "4-";
+fileId = "20-duty-cycle";
 
 // In milliseconds.
-TIMEOUT(14400000);
+TIMEOUT(7200000);
 
 while (true) {
   //Has the output file been created.

@@ -17,6 +17,8 @@
     "utility": "c",
     "clock.h": "c",
     "ostream": "c",
-    "powertrace.h": "c"
+    "powertrace.h": "c",
+    "netstack.h": "c",
+    "battery-sensor.h": "c"
   }
 }
