@@ -21,6 +21,8 @@
 
 // VARIAVEIS DO TMOTE SKY
 #define _Nb 90  // tamanho do pacote
+#define PERIOD_IN_SECONDS 10
+
 static uint32_t _Eihop, _P0;
 static uint8_t _Dist = 135;
 static uint8_t _R = 250;  // TMOTE SKY
@@ -32,8 +34,10 @@ static double rx = 0.0218 * 1000;
 static double cpu = 0.0000545 * 1000;
 static double cpu_stand = 0.0000051 * 1000;
 
-// DADOS DE TRABNSMISSAO
+// DADOS DE TRANSMISSAO
 static struct collect_conn tc;
+static struct etimer periodic;
+static clock_time_t periodic_interval = CLOCK_SECOND * PERIOD_IN_SECONDS;
 
 /*---------------------------------------------------------------------------*/
 /*-------------------------------CODE----------------------------------------*/
@@ -45,6 +49,8 @@ void powertrace_print(char *str) {
 
   uint32_t current, charge, power, energy;
 
+  energest_flush();
+
   all_cpu = energest_type_time(ENERGEST_TYPE_CPU);
   all_lpm = energest_type_time(ENERGEST_TYPE_LPM);
   all_transmit = energest_type_time(ENERGEST_TYPE_TRANSMIT);
@@ -54,8 +60,6 @@ void powertrace_print(char *str) {
   current_idle = all_lpm - last_lpm;
   current_tx_mode = all_transmit - last_transmit;
   current_rx_mode = all_listen - last_listen;
-
-  energest_flush();
 
   // INSERIR NO INICIO DA TRANSMISSAO
   last_cpu = energest_type_time(ENERGEST_TYPE_CPU);
@@ -70,10 +74,6 @@ void powertrace_print(char *str) {
   charge = current * (current_cpu + current_idle) / RTIMER_ARCH_SECOND;
   power = current * voltage;
   energy = charge * voltage;
-
-  // printf("power: %u.%02u mW\n", (uint16_t)power / 1000, (uint16_t)power %
-  // 1000); printf("consumption: %u.%02u mJ\n\n", (uint16_t)energy / 1000,
-  //        (uint16_t)energy % 1000);
 
   _Eihop = energy;
   _P0 = power;
@@ -98,7 +98,8 @@ static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
     // Eihop,P0, i,d,R,Nb
     // printf("dataptr: %s, hops: %d, d: %u, _R: %u, _Nb: %u \n",
     //        (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
-    printf("%s,%d,%u,%u,%u\n", (char *)packetbuf_dataptr(), hops, d, _R, _Nb);
+    printf("recv: %s,%d,%u,%u,%u\n", (char *)packetbuf_dataptr(), hops, d, _R,
+           _Nb);
   }
 }
 
@@ -108,11 +109,11 @@ static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
 static const struct collect_callbacks callbacks = {recv};
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(example_collect_process, ev, data) {
-  static struct etimer periodic;
   static struct etimer et;
 
   // CRIACAO DO PACOTE
   powertrace_print("");
+  // powertrace_start(CLOCK_SECOND * 10);
   // char *packet = malloc(_Nb);
   char packet[_Nb];
   // "abcedefghijklmnopqrstuvwxyzabcedefghijklmnopqrstuvwxyz";
@@ -129,19 +130,15 @@ PROCESS_THREAD(example_collect_process, ev, data) {
   }
 
   // Aguarde algum tempo para que a rede se estabilize.
+  // powertrace_print(packet);
   etimer_set(&et, 30 * CLOCK_SECOND);
   PROCESS_WAIT_UNTIL(etimer_expired(&et));
   printf("Starting to sense\n");
 
   while (1) {
-    // Envio de pacote a cada 30 segundos.
-    // printf("Starting to sense\n");
-    etimer_set(&periodic, CLOCK_SECOND * 5);
-    // printf("periodic timer set");
-    etimer_set(&et, random_rand() % (CLOCK_SECOND * 5));
-    // printf("et timer set");
+    // Envio de pacote a cada PERIOD_IN_SECONDS segundos.
+    etimer_set(&periodic, periodic_interval);
 
-    PROCESS_WAIT_UNTIL(etimer_expired(&et));
     {
       static linkaddr_t oldparent;
       const linkaddr_t *parent;
@@ -165,7 +162,7 @@ PROCESS_THREAD(example_collect_process, ev, data) {
         linkaddr_copy(&oldparent, parent);
       }
     }
-
+    // printf("Packet: %s\n", packet);
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
   }
 

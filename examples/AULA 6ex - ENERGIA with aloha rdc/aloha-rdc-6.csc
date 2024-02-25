@@ -8,7 +8,7 @@
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
     <title>aloha-rdc-6</title>
-    <randomseed>572499</randomseed>
+    <randomseed>574499</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
