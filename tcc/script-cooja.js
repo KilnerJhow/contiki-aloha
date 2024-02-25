@@ -5,8 +5,9 @@ importPackage(java.io);
 WAIT_UNTIL(id == 1 && msg.contains("Starting to sense"));
 
 outputs = new Object();
-runId = "4-";
-fileId = "20-duty-cycle";
+runId = "10-";
+fileId = "10-duty-cycle";
+fileLocation = "/home/jonathan/contiki-aloha/tcc/simulation-runs/" + fileId + "/log_" + runId + fileId + ".csv";
 
 // In milliseconds.
 TIMEOUT(7200000);
@@ -15,14 +16,12 @@ while (true) {
   //Has the output file been created.
   if (id == 1 && !msg.contains("Starting to sense")) {
     if (!outputs[id.toString()]) {
-      // Open log_<id>.txt for writing.
-      // BTW: FileWriter seems to be buffered.
-      outputs[id.toString()] = new FileWriter("../../../csv/log_" + runId + fileId + ".csv");
+      outputs[id.toString()] = new FileWriter(fileLocation);
       outputs[id.toString()].write("time,_Eihop,_P0,hops,d,_R,_Nb\n");
     }
     //Write to file.
-    outputs[id.toString()].write(time + "," + msg + "\n");
-    log.log(time + "," + msg + "\n");
+    outputs[id.toString()].write(msg + "\n");
+    log.log(msg + "\n");
   }
 
   try {
