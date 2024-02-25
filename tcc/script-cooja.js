@@ -17,7 +17,7 @@ while (true) {
   if (id == 1 && !msg.contains("Starting to sense")) {
     if (!outputs[id.toString()]) {
       outputs[id.toString()] = new FileWriter(fileLocation);
-      outputs[id.toString()].write("time,_Eihop,_P0,hops,d,_R,_Nb\n");
+      outputs[id.toString()].write("cpu,lpm,transmit,listen,hops,d,_R,_Nb\n");
     }
     //Write to file.
     outputs[id.toString()].write(msg + "\n");

@@ -7,8 +7,8 @@
   <project EXPORT="discard">[APPS_DIR]/collect-view</project>
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
-    <title>My simulation</title>
-    <randomseed>123456</randomseed>
+    <title>aloha-always-on-1</title>
+    <randomseed>generated</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
@@ -24,9 +24,9 @@
       org.contikios.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
       <description>Sky Mote Type #sky1</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/AULA 6ex - ENERGIA/ENERGIA.c</source>
+      <source EXPORT="discard">[CONTIKI_DIR]/tcc/aloha-always-on/ENERGIA.c</source>
       <commands EXPORT="discard">make ENERGIA.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/AULA 6ex - ENERGIA/ENERGIA.sky</firmware>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/tcc/aloha-always-on/ENERGIA.sky</firmware>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.IPAddress</moteinterface>
@@ -101,7 +101,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>0</z>
+    <z>5</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -144,10 +144,10 @@
       <showRadioRXTX />
       <showRadioHW />
       <showLEDs />
-      <zoomfactor>100.0</zoomfactor>
+      <zoomfactor>500.0</zoomfactor>
     </plugin_config>
     <width>1708</width>
-    <z>1</z>
+    <z>2</z>
     <height>166</height>
     <location_x>0</location_x>
     <location_y>810</location_y>
@@ -159,10 +159,62 @@
       <decorations>true</decorations>
     </plugin_config>
     <width>1028</width>
-    <z>2</z>
+    <z>1</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.ScriptRunner
+    <plugin_config>
+      <script>load("nashorn:mozilla_compat.js");
+
+importPackage(java.io);
+
+WAIT_UNTIL(id == 1 &amp;&amp; msg.contains("Starting to sense"));
+
+outputs = new Object();
+runId = "1-";
+fileId = "aloha-always-on";
+fileLocation = "/home/jonathan/contiki-aloha/tcc/simulation-runs/"+fileId+"/log_" + runId + fileId + ".csv";
+
+// In milliseconds.
+TIMEOUT(7200000);
+
+while (true) {
+  //Has the output file been created.
+  if (id == 1 &amp;&amp; !msg.contains("Starting to sense")) {
+    if (!outputs[id.toString()]) {
+      // Open log_&amp;amp;lt;id&amp;amp;gt;.txt for writing.
+      // BTW: FileWriter seems to be buffered.
+      outputs[id.toString()] = new FileWriter(fileLocation);
+      outputs[id.toString()].write("cpu,lpm,transmit,listen,hops,d,_R,_Nb\n");
+    }
+    //Write to file.
+    outputs[id.toString()].write(msg + "\n");
+    log.log(msg + "\n");
+  }
+
+  try {
+    //This is the tricky part. The Script is terminated using
+    // an exception. This needs to be caught.
+    YIELD();
+  } catch (e) {
+    //Close files.
+    for (var ids in outputs) {
+      outputs[ids].close();
+    }
+    //Rethrow exception again, to end the script.
+    throw ('test script killed');
+  }
+}</script>
+      <active>true</active>
+    </plugin_config>
+    <width>600</width>
+    <z>0</z>
+    <height>700</height>
+    <location_x>663</location_x>
+    <location_y>171</location_y>
   </plugin>
 </simconf>
 

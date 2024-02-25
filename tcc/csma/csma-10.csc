@@ -7,8 +7,8 @@
   <project EXPORT="discard">[APPS_DIR]/collect-view</project>
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
-    <title>aloha-radio-always-on</title>
-    <randomseed>123456</randomseed>
+    <title>csma-10</title>
+    <randomseed>generated</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
@@ -24,9 +24,9 @@
       org.contikios.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
       <description>Sky Mote Type #sky1</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/AULA 6ex - ENERGIA with aloha radio always on/ENERGIA.c</source>
+      <source EXPORT="discard">[CONTIKI_DIR]/tcc/csma/ENERGIA.c</source>
       <commands EXPORT="discard">make ENERGIA.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/AULA 6ex - ENERGIA with aloha radio always on/ENERGIA.sky</firmware>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/tcc/csma/ENERGIA.sky</firmware>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.IPAddress</moteinterface>
@@ -101,7 +101,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>0</z>
+    <z>5</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -114,10 +114,10 @@
       <skin>org.contikios.cooja.plugins.skins.GridVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.TrafficVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.UDGMVisualizerSkin</skin>
-      <viewport>1.3090909090909089 0.0 0.0 1.3090909090909089 117.05090909090912 190.16000000000003</viewport>
+      <viewport>0.9090909090909091 0.0 0.0 0.9090909090909091 153.0909090909091 173.0</viewport>
     </plugin_config>
     <width>400</width>
-    <z>1</z>
+    <z>4</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -130,7 +130,7 @@
       <coloring />
     </plugin_config>
     <width>1308</width>
-    <z>4</z>
+    <z>3</z>
     <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
@@ -147,7 +147,7 @@
       <zoomfactor>500.0</zoomfactor>
     </plugin_config>
     <width>1708</width>
-    <z>3</z>
+    <z>2</z>
     <height>166</height>
     <location_x>0</location_x>
     <location_y>810</location_y>
@@ -159,10 +159,62 @@
       <decorations>true</decorations>
     </plugin_config>
     <width>1028</width>
-    <z>2</z>
+    <z>1</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.ScriptRunner
+    <plugin_config>
+      <script>
+      load("nashorn:mozilla_compat.js");
+
+      importPackage(java.io);
+
+      WAIT_UNTIL(id == 1 &amp;&amp; msg.contains("Starting to sense"));
+
+      outputs = new Object();
+      runId = "10-";
+      fileId = "csma";
+      fileLocation = "/home/jonathan/contiki-aloha/tcc/simulation-runs/" + fileId + "/log_" + runId + fileId + ".csv";
+
+      // In milliseconds.
+      TIMEOUT(7200000);
+
+      while (true) {
+        //Has the output file been created.
+        if (id == 1 &amp;&amp; !msg.contains("Starting to sense")) {
+          if (!outputs[id.toString()]) {
+            outputs[id.toString()] = new FileWriter(fileLocation);
+            outputs[id.toString()].write("time,_Eihop,_P0,hops,d,_R,_Nb\n");
+          }
+          //Write to file.
+          outputs[id.toString()].write(msg + "\n");
+          log.log(msg + "\n");
+        }
+
+        try {
+          //This is the tricky part. The Script is terminated using
+          // an exception. This needs to be caught.
+          YIELD();
+        } catch (e) {
+          //Close files.
+          for (var ids in outputs) {
+            outputs[ids].close();
+          }
+          //Rethrow exception again, to end the script.
+          throw ('test script killed');
+        }
+      }
+      </script>
+      <active>true</active>
+    </plugin_config>
+    <width>600</width>
+    <z>0</z>
+    <height>700</height>
+    <location_x>954</location_x>
+    <location_y>78</location_y>
   </plugin>
 </simconf>
 
