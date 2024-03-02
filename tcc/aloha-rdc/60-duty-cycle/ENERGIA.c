@@ -25,7 +25,7 @@
 
 static uint32_t _Eihop, _P0;
 static uint32_t cpu, lpm, transmit, listen;
-static uint8_t _Dist = 135;
+static uint8_t _Dist = 45;
 static uint8_t _R = 250;  // TMOTE SKY
 static uint32_t seqno = 0;
 
@@ -93,7 +93,7 @@ AUTOSTART_PROCESSES(&example_collect_process);
 /*---------------------------------------------------------------------------*/
 static void recv(const linkaddr_t *originator, uint8_t seqno, uint8_t hops) {
   if ((hops > 0) && (strncmp(packetbuf_dataptr(), "0.00,0.00", 8) > 0)) {
-    uint8_t d = _Dist / hops;
+    uint8_t d = _Dist * hops;
 
     /* Eihop: Consumo Energetico Por i saltos
        P0: potência de transmissão
